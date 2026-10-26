@@ -1,0 +1,53 @@
+# Builds maps.sustenaut.eu from the state's open data and publishes it to
+# Cloudflare Pages: on every push to main, every Monday (the data changes
+# slowly, and a weekly build keeps it current), and by hand.
+#
+# The Pages project is the maps site in schryer/business-plan's
+# pubkit.json (made by its infra/dns.tf). The token is the Actions secret
+# CLOUDFLARE_GITHUB_API_TOKEN, which can only edit Pages; the account is
+# the Actions variable CLOUDFLARE_ACCOUNT_ID. It stays off until those
+# exist: set the repository variable MAPS_DEPLOY to "on".
+name: deploy
+
+on:
+  push: { branches: [main] }
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.MAPS_DEPLOY == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Install tippecanoe
+        run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
+      - run: make venv node
+      - name: Download the data
+        run: bin/maps download
+      - name: Build the site
+        run: bin/maps build
+      - uses: schryer/pubkit/actions/deploy-static@v0.14.0
+        with:
+          dir: _site
+          cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}
+          cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          cloudflare-project: sustenaut-maps
+      - name: Check the site
+        run: |
+          want=$(jq -r .overview _site/index.json)
+          for i in $(seq 1 30); do
+            curl -fs https://sustenaut-maps.pages.dev/index.json | grep -qF "$want" && exit 0
+            sleep 5
+          done
+          echo "sustenaut-maps.pages.dev does not serve this build's index.json" >&2
+          exit 1

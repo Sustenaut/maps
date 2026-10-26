@@ -1,0 +1,7 @@
+# The build's and the functional suite's direct dependencies. Exact pins
+# only; the resolved set with hashes lives in requirements.lock. Regenerate
+# it with `pubkit lock`.
+-r requirements-pubkit.txt
+shapely==2.2.0
+pyproj==3.8.0
+numpy==2.3.4

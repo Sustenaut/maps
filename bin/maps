@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# maps: download Estonia's map data and build maps.sustenaut.eu.
+# `maps --help` lists the commands; mapbuild/__main__.py has the details.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+python="${MAPS_PYTHON:-$here/.venv/bin/python}"
+[ -x "$python" ] || python=python3
+PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" exec "$python" -m mapbuild "$@"

@@ -1,0 +1,10 @@
+{
+  "name": "sustenaut-maps",
+  "version": "0.1.0",
+  "description": "maps.sustenaut.eu: the map library its package loads.",
+  "private": true,
+  "dependencies": {
+    "maplibre-gl": "6.13.0",
+    "pmtiles": "4.5.0"
+  }
+}

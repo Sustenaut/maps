@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>maps.sustenaut.eu</title>
+<meta name="description" content="Maps of Estonia from open state data, for any sustenaut.eu site.">
+<style>
+  :root { --ink: #2E2418; --muted: #6B5D4B; --line: #DDD3BD; --bg: #FAF7EE; --accent: #3F7A3A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  p { margin: .5rem 0; color: var(--muted); }
+  #map { height: min(70vh, 34rem); border: 1px solid var(--line); border-radius: 8px; margin: 1rem 0; }
+  pre { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .75rem; overflow-x: auto; font-size: .85rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
+  td button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .error { color: #9B2C2C; }
+</style>
+</head>
+<body>
+<main>
+  <h1>maps.sustenaut.eu</h1>
+  <p>Maps of Estonia from open state data (Maa- ja Ruumiamet's ETAK, EHAK and the Building Register, and RMK's trails), built weekly, for any sustenaut.eu site.</p>
+  <div id="map"></div>
+  <h2>Use it</h2>
+<pre>&lt;div id="map" style="height: 400px"&gt;&lt;/div&gt;
+&lt;script type="module"&gt;
+  import { createMap } from "https://maps.sustenaut.eu/lib/v1/map.js";
+  const { map, maplibre } = await createMap(document.getElementById("map"), {
+    center: { lat: 57.729, lng: 26.929 }, radiusKm: 25, zoom: 11,
+  });
+  new maplibre.Marker().setLngLat([26.929, 57.729]).addTo(map);
+&lt;/script&gt;</pre>
+  <h2>Areas</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Path</th><th>Neighbours</th></tr></thead>
+    <tbody id="areas"></tbody>
+  </table>
+</main>
+<script type="module">
+  import { createMap, loadIndex } from "./lib/v1/map.js";
+  const rows = document.getElementById("areas");
+  try {
+    const index = await loadIndex();
+    const first = index.areas[0];
+    const centre = (a) => ({ lng: (a.bbox[0] + a.bbox[2]) / 2, lat: (a.bbox[1] + a.bbox[3]) / 2 });
+    const { map } = await createMap(document.getElementById("map"), {
+      center: first ? centre(first) : { lat: 58.6, lng: 25.0 },
+      radiusKm: 400,
+      zoom: first ? 8 : 6,
+      cooperativeGestures: false,
+    });
+    for (const a of index.areas) {
+      const tr = rows.insertRow();
+      const button = Object.assign(document.createElement("button"), { textContent: a.name });
+      button.onclick = () => map.fitBounds([[a.bbox[0], a.bbox[1]], [a.bbox[2], a.bbox[3]]], { padding: 20 });
+      tr.insertCell().append(button);
+      tr.insertCell().textContent = a.path;
+      tr.insertCell().textContent = a.neighbours.join(", ");
+    }
+  } catch (err) {
+    rows.innerHTML = `<tr><td colspan="3" class="error"></td></tr>`;
+    rows.querySelector("td").textContent = String(err);
+  }
+</script>
+</body>
+</html>
