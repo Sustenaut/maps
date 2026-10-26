@@ -38,6 +38,7 @@ to `/lib/v2/`. `lib/v1/map.js` documents every export.
 | Path | What |
 | --- | --- |
 | `index.json` | the overview and every area pack (where its pieces are), each area's name, EHAK code, extent and neighbours |
+| `municipalities.json` | every municipality: where to write its name, its extent, and the settlement it is run from (`centres.json`), for `addMunicipalities()` |
 | `packs/eesti/<hash>/<n>.bin` | all of Estonia, zoom 5 to 10 |
 | `packs/<path>/<hash>/<n>.bin` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
 | `lib/v1/` | the map package, its fonts and the map library |
@@ -50,7 +51,9 @@ by the pack's content, so pieces are cached for good and a changed pack
 gets new names; `index.json` is cached for five minutes. Any origin may
 read them.
 
-To add an area, add its EHAK name and path to `areas.json`.
+To add an area, add its EHAK name and path to `areas.json`. When a
+municipality moves its seat or two merge, change `centres.json`; the build
+names any seat it cannot find.
 
 ## Building
 

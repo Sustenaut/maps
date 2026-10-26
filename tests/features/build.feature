@@ -28,6 +28,16 @@ Feature: Building the site
     And the pack of "louna/alfa" spans zoom 8 to 15
     And the overview has the layers "road, water, boundary, place_label, area_label"
 
+  Scenario: Every municipality is listed, with the settlement it is run from
+    Given "Alfa vald" is run from "Alfa küla"
+    And "Beeta vald" is run from "Gamma küla"
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it succeeds
+    And municipalities.json labels "Alfa vald" inside it
+    And municipalities.json has "Alfa vald" run from "Alfa"
+    And municipalities.json has "Beeta vald" with no centre
+    And stderr mentions "Gamma küla"
+
   Scenario: Every map names the data's sources
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
     Then it succeeds
