@@ -1,0 +1,8 @@
+node_modules/
+_site/
+data/
+.venv/
+.pubkit/
+.cache/
+__pycache__/
+.pytest_cache/
