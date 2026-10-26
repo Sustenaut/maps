@@ -1,0 +1,9 @@
+{
+  "comment": "The area packs maps.sustenaut.eu serves: one per municipality, by its EHAK name, at a path that sites use to find it. The overview covers all of Estonia. Add an area here and the next build fetches and publishes it.",
+  "areas": [
+    { "name": "Rõuge vald", "path": "louna-eesti/rouge" },
+    { "name": "Võru vald", "path": "louna-eesti/voru-vald" },
+    { "name": "Võru linn", "path": "louna-eesti/voru" },
+    { "name": "Antsla vald", "path": "louna-eesti/antsla" }
+  ]
+}

@@ -1,0 +1,71 @@
+# maps.sustenaut.eu
+
+Maps of Estonia from the state's open data, built weekly and served from
+Cloudflare Pages, for any sustenaut.eu site (visit.ee first).
+
+The data is Maa- ja Ruumiamet's topographic database (ETAK), its
+administrative boundaries (EHAK) and the Building Register's use codes
+(EHR), and RMK's trails and visitor sites, all read from the state WFS at
+gsavalik.envir.ee. There is no OpenStreetMap data in the maps.
+
+## Using a map on a site
+
+```html
+<div id="map" style="height: 400px"></div>
+<script type="module">
+  import { createMap, setGroup, setEmphasis, circle } from "https://maps.sustenaut.eu/lib/v1/map.js";
+  const { map, maplibre } = await createMap(document.getElementById("map"), {
+    center: { lat: 57.729, lng: 26.929 },
+    radiusKm: 25,   // load the area packs within 25 km
+    zoom: 11,       // anything else goes to MapLibre's Map
+  });
+  new maplibre.Marker().setLngLat([26.929, 57.729]).addTo(map);
+  setEmphasis(map, "foot");          // trails forward, roads back
+  setGroup(map, "buildings", false); // groups: roads, trails, buildings, borders
+</script>
+```
+
+The package loads MapLibre GL and PMTiles from this site, so a site needs
+nothing else. `/lib/v1/` only grows; a change that would break a site goes
+to `/lib/v2/`. `lib/v1/map.js` documents every export.
+
+## What the site serves
+
+| Path | What |
+| --- | --- |
+| `index.json` | the overview and every area pack, with content-hashed file names, each area's name, EHAK code, extent and neighbours |
+| `eesti/overview.<hash>.pmtiles` | all of Estonia, zoom 5 to 10 |
+| `<path>/map.<hash>.pmtiles` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
+| `lib/v1/` | the map package, its fonts and the map library |
+
+Packs are cached for good (a new build gives a changed pack a new name);
+`index.json` for five minutes. Any origin may read them with range
+requests. Pages serves no file over 25 MiB, and the build stops if a pack
+would be bigger.
+
+To add an area, add its EHAK name and path to `areas.json`.
+
+## Building
+
+You need Python 3, Node and tippecanoe (`apt install tippecanoe`).
+
+```sh
+make venv node
+bin/maps download   # into data/; a finished layer is kept
+bin/maps build      # into _site/
+make functional     # the Gherkin suite, on small made-up data
+```
+
+`.github/workflows/deploy.yml` downloads, builds and publishes on every
+push to main and every Monday. It runs once the repository variable
+`MAPS_DEPLOY` is `on`, with the Actions secret `CLOUDFLARE_GITHUB_API_TOKEN`
+and variable `CLOUDFLARE_ACCOUNT_ID`. The Pages project `sustenaut-maps`
+and the DNS name come from schryer/business-plan's infrastructure.
+
+`pr.yml` and `main.yml` are written by `pubkit sync` from `pubkit.json`.
+
+## Licences
+
+The map data: © Maa- ja Ruumiamet (ETAK, EHAK, EHR), under its open data
+licence, and © RMK. The fonts: Noto Sans, SIL Open Font License
+(`lib/v1/fonts/OFL.txt`). MapLibre GL JS: BSD-3-Clause. PMTiles: BSD-3-Clause.
