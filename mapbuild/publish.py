@@ -3,6 +3,8 @@ the index, and the map package.
 
     out/index.json                    what is here: the overview and each area
                                       pack, with where its pieces are
+    out/municipalities.json           every municipality: its name, where to
+                                      label it, its box and its centre
     out/packs/eesti/<hash>/<n>.bin    the overview, in pieces
     out/packs/<path>/<hash>/<n>.bin   one pack per area, in pieces
     out/lib/v1/...                    the map package (lib/v1 in the repository)
@@ -17,7 +19,7 @@ import os
 import shutil
 from pathlib import Path
 
-from . import area, overview
+from . import area, municipalities as municipality_list, overview
 from .sources import municipalities
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +46,8 @@ HEADERS = """\
   Access-Control-Allow-Origin: *
 /index.json
   Cache-Control: public, max-age=300
+/municipalities.json
+  Cache-Control: public, max-age=3600
 /packs/*
   Cache-Control: public, max-age=31536000, immutable
 /lib/*
@@ -64,7 +68,7 @@ def pieces(pack: Path, out: Path, path: str) -> dict:
     return {"dir": folder.as_posix(), "size": len(data), "chunk": CHUNK}
 
 
-def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path) -> dict:
+def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path, centres: Path) -> dict:
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
@@ -84,6 +88,8 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         index["areas"].append({"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])})
 
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    listed = municipality_list.build(data, centres)
+    (out / "municipalities.json").write_text(json.dumps(listed, ensure_ascii=False) + "\n", encoding="utf-8")
     shutil.copytree(ROOT / "lib", out / "lib")
     for target, source in VENDOR.items():
         dest = out / "lib" / "v1" / "vendor" / target

@@ -22,7 +22,7 @@ scenarios("build.feature", "download.feature")
 AREA_LAYERS = ["road", "rail", "cutline", "sea", "lake", "river_a", "river_l", "wood", "wetland", "field",
                "open", "yard", "peat", "other_lc", "building", "settlement", "rmk_hike", "rmk_bike",
                "rmk_route", "rmk_poi"]
-NATIONAL_LAYERS = ["sea", "lake", "road", "rail", "river", "county", "town", "wood", "wetland"]
+NATIONAL_LAYERS = ["sea", "lake", "road", "rail", "river", "county", "town", "wood", "wetland", "centre"]
 
 # Alfa vald and Beeta vald share the meridian 26.9.
 ALFA = (26.80, 57.70, 26.90, 57.75)
@@ -75,6 +75,7 @@ def national_layers():
         "town": [feature(rect(26.94, 57.73, 26.96, 57.74), asustusyksus="Beeta alevik", tyyp="alevik")],
         "wood": [feature(rect(26.8, 57.7, 26.85, 57.72), tyyp=10)],
         "wetland": [feature(rect(26.95, 57.7, 27.0, 57.72), tyyp=20)],
+        "centre": [feature(rect(26.82, 57.72, 26.83, 57.73), asustusyksus="Alfa küla", tyyp="küla", omavalitsus="Alfa vald")],
     }
 
 
@@ -121,6 +122,15 @@ def env() -> dict:
     return {}
 
 
+@given(parsers.parse('"{name}" is run from "{seat}"'))
+def run_from(tmp_path: Path, env: dict, name: str, seat: str) -> None:
+    centres = tmp_path / "centres.json"
+    listed = json.loads(centres.read_text()) if centres.exists() else {"centres": {}}
+    listed["centres"][name] = seat
+    centres.write_text(json.dumps(listed))
+    env["centres"] = centres
+
+
 @given(parsers.parse("pieces of {size:d} bytes"))
 def pieces_of(env: dict, size: int) -> None:
     env["MAPS_CHUNK"] = str(size)
@@ -130,7 +140,8 @@ def pieces_of(env: dict, size: int) -> None:
 def build(run, binary, tmp_path: Path, data: Path, env: dict, a, a_path, b, b_path):
     areas = tmp_path / "areas.json"
     areas.write_text(json.dumps({"areas": [{"name": a, "path": a_path}, {"name": b, "path": b_path}]}))
-    return run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site",
+    centres = ["--centres", env.pop("centres")] if "centres" in env else []
+    return run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site", *centres,
                env=env, timeout=600)
 
 
@@ -250,6 +261,30 @@ def headers(site: Path) -> dict[str, list[str]]:
             current = raw.strip()
             rules[current] = []
     return rules
+
+
+def municipality(site: Path, name: str) -> dict:
+    listed = json.loads((site / "municipalities.json").read_text(encoding="utf-8"))["municipalities"]
+    return next(m for m in listed if m["name"] == name)
+
+
+@then(parsers.parse('municipalities.json labels "{name}" inside it'))
+def labelled_inside(site: Path, name: str) -> None:
+    lng, lat = municipality(site, name)["label"]
+    w, s, e, n = municipality(site, name)["bbox"]
+    assert w <= lng <= e and s <= lat <= n
+
+
+@then(parsers.parse('municipalities.json has "{name}" run from "{seat}"'))
+def has_centre(site: Path, name: str, seat: str) -> None:
+    centre = municipality(site, name)["centre"]
+    assert centre and centre["name"] == seat, centre
+    assert 26.82 <= centre["lng"] <= 26.83 and 57.72 <= centre["lat"] <= 57.73, centre
+
+
+@then(parsers.parse('municipalities.json has "{name}" with no centre'))
+def no_centre(site: Path, name: str) -> None:
+    assert municipality(site, name)["centre"] is None
 
 
 @then("_headers lets any site read the maps")

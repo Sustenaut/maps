@@ -88,7 +88,13 @@ def area(data: Path, name: str, path: str) -> None:
         list(pool.map(lambda kv: wfs.fetch(kv[1], out / f"{kv[0]}.geojsonl", bbox=bbox), AREA_LAYERS.items()))
 
 
-def national(data: Path) -> None:
+def national(data: Path, centres: Path) -> None:
     out = data / "national"
+    layers = dict(NATIONAL_LAYERS)
+    # The settlements municipalities are run from (centres.json), villages
+    # among them, which the town layer leaves out.
+    seats = sorted({s for s in json.loads(centres.read_text(encoding="utf-8"))["centres"].values() if s})
+    quoted = ",".join("'" + s.replace("'", "''") + "'" for s in seats)
+    layers["centre"] = ("ehak:asustusyksuste_piirid", f"asustusyksus IN ({quoted})" if seats else "EXCLUDE")
     with cf.ThreadPoolExecutor(4) as pool:
-        list(pool.map(lambda kv: wfs.fetch(kv[1][0], out / f"{kv[0]}.geojsonl", cql=kv[1][1]), NATIONAL_LAYERS.items()))
+        list(pool.map(lambda kv: wfs.fetch(kv[1][0], out / f"{kv[0]}.geojsonl", cql=kv[1][1]), layers.items()))
