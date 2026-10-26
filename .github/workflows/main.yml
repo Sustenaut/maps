@@ -11,12 +11,12 @@ permissions:
 jobs:
   checks:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-service-checks.yml@v0.14.0
+    uses: schryer/pubkit/.github/workflows/job-service-checks.yml@v0.14.2
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-service-tests.yml@v0.14.0
+    uses: schryer/pubkit/.github/workflows/job-service-tests.yml@v0.14.2
     with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
 
   # The one check a ruleset requires: it passes only when every job
