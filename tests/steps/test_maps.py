@@ -83,10 +83,18 @@ def write(path: Path, features) -> None:
     path.write_text("".join(json.dumps(f, ensure_ascii=False) + "\n" for f in features), encoding="utf-8")
 
 
-def pmtiles(path: Path) -> dict:
-    """A PMTiles v3 file's zoom range and metadata."""
-    data = path.read_bytes()
-    assert data[:7] == b"PMTiles" and data[7] == 3, path
+def joined(site: Path, pack: dict) -> bytes:
+    """A pack's pieces, joined in order."""
+    count = -(-pack["size"] // pack["chunk"])
+    pieces = [site / pack["dir"] / f"{n}.bin" for n in range(count)]
+    assert sorted(p.name for p in (site / pack["dir"]).iterdir()) == sorted(p.name for p in pieces)
+    return b"".join(p.read_bytes() for p in pieces)
+
+
+def pmtiles(site: Path, pack: dict) -> dict:
+    """A PMTiles v3 pack's zoom range and metadata."""
+    data = joined(site, pack)
+    assert data[:7] == b"PMTiles" and data[7] == 3, pack["dir"]
     meta_offset, meta_length = struct.unpack_from("<QQ", data, 24)
     meta = data[meta_offset:meta_offset + meta_length]
     if data[97] == 2:
@@ -113,9 +121,9 @@ def env() -> dict:
     return {}
 
 
-@given(parsers.parse("packs may be at most {size:d} bytes"))
-def packs_at_most(env: dict, size: int) -> None:
-    env["MAPS_MAX_FILE"] = str(size)
+@given(parsers.parse("pieces of {size:d} bytes"))
+def pieces_of(env: dict, size: int) -> None:
+    env["MAPS_CHUNK"] = str(size)
 
 
 @when(parsers.parse('I build the areas "{a}" at "{a_path}" and "{b}" at "{b_path}"'), target_fixture="result")
@@ -144,18 +152,39 @@ def lists_areas(site: Path, paths: str) -> None:
     assert [a["path"] for a in index(site)["areas"]] == paths.split(", ")
 
 
-@then("every file index.json names exists and is named by its content")
-def files_hashed(site: Path) -> None:
+def packs(site: Path) -> list[dict]:
     i = index(site)
-    for name in [i["overview"]] + [a["file"] for a in i["areas"]]:
-        f = site / name
-        digest = hashlib.sha256(f.read_bytes()).hexdigest()[:12]
-        assert f.name.split(".")[-2] == digest, name
+    return [i["overview"]] + [a["pack"] for a in i["areas"]]
 
 
-@then(parsers.parse('index.json lists the overview "{pattern}"'))
-def lists_overview(site: Path, pattern: str) -> None:
-    assert re.fullmatch(re.escape(pattern).replace(re.escape("<hash>"), "[0-9a-f]{12}"), index(site)["overview"])
+def matches(pattern: str, value: str) -> bool:
+    return re.fullmatch(re.escape(pattern).replace(re.escape("<hash>"), "[0-9a-f]{12}"), value) is not None
+
+
+@then(parsers.parse('the pack of "{path}" is in "{pattern}"'))
+def pack_in(site: Path, path: str, pattern: str) -> None:
+    assert matches(pattern, area(site, path)["pack"]["dir"]), area(site, path)["pack"]
+
+
+@then(parsers.parse('the overview is in "{pattern}"'))
+def overview_in(site: Path, pattern: str) -> None:
+    assert matches(pattern, index(site)["overview"]["dir"]), index(site)["overview"]
+
+
+@then("every pack's pieces join into a PMTiles archive named by its content")
+def pieces_join(site: Path) -> None:
+    for pack in packs(site):
+        data = joined(site, pack)
+        assert len(data) == pack["size"] and data[:7] == b"PMTiles", pack
+        assert pack["dir"].rsplit("/", 1)[1] == hashlib.sha256(data).hexdigest()[:12], pack
+
+
+@then(parsers.parse('the pack of "{path}" is in more than one piece of {size:d} bytes'))
+def several_pieces(site: Path, path: str, size: int) -> None:
+    pack = area(site, path)["pack"]
+    files = sorted((site / pack["dir"]).iterdir(), key=lambda p: int(p.stem))
+    assert pack["chunk"] == size and len(files) > 1, pack
+    assert all(f.stat().st_size == size for f in files[:-1]) and 0 < files[-1].stat().st_size <= size
 
 
 @then(parsers.parse('the area "{path}" has the neighbours "{names}"'))
@@ -183,29 +212,29 @@ def attribution_names(site: Path, names: str) -> None:
 @then("every pack carries the same attribution as index.json")
 def packs_attributed(site: Path) -> None:
     i = index(site)
-    for name in [i["overview"]] + [a["file"] for a in i["areas"]]:
-        assert pmtiles(site / name)["metadata"]["attribution"] == i["attribution"], name
+    for pack in packs(site):
+        assert pmtiles(site, pack)["metadata"]["attribution"] == i["attribution"], pack["dir"]
 
 
-def layers(f: Path) -> set[str]:
-    return {layer["id"] for layer in pmtiles(f)["metadata"]["vector_layers"]}
+def layers(site: Path, pack: dict) -> set[str]:
+    return {layer["id"] for layer in pmtiles(site, pack)["metadata"]["vector_layers"]}
 
 
 @then(parsers.parse('the pack of "{path}" has the layers "{names}"'))
 def pack_layers(site: Path, path: str, names: str) -> None:
-    missing = set(names.split(", ")) - layers(site / area(site, path)["file"])
+    missing = set(names.split(", ")) - layers(site, area(site, path)["pack"])
     assert not missing, missing
 
 
 @then(parsers.parse('the pack of "{path}" spans zoom {low:d} to {high:d}'))
 def pack_zooms(site: Path, path: str, low: int, high: int) -> None:
-    p = pmtiles(site / area(site, path)["file"])
+    p = pmtiles(site, area(site, path)["pack"])
     assert (p["minzoom"], p["maxzoom"]) == (low, high)
 
 
 @then(parsers.parse('the overview has the layers "{names}"'))
 def overview_layers(site: Path, names: str) -> None:
-    missing = set(names.split(", ")) - layers(site / index(site)["overview"])
+    missing = set(names.split(", ")) - layers(site, index(site)["overview"])
     assert not missing, missing
 
 
@@ -223,18 +252,15 @@ def headers(site: Path) -> dict[str, list[str]]:
     return rules
 
 
-@then("_headers lets any origin make range requests")
+@then("_headers lets any site read the maps")
 def cors(site: Path) -> None:
-    rule = headers(site)["/*"]
-    assert "Access-Control-Allow-Origin: *" in rule
-    assert "Access-Control-Allow-Headers: Range" in rule
-    assert any(h.startswith("Access-Control-Expose-Headers:") and "Content-Range" in h for h in rule)
+    assert "Access-Control-Allow-Origin: *" in headers(site)["/*"]
 
 
 @then("_headers caches packs for good and index.json for 5 minutes")
 def caching(site: Path) -> None:
     h = headers(site)
-    assert "Cache-Control: public, max-age=31536000, immutable" in h["/*.pmtiles"]
+    assert "Cache-Control: public, max-age=31536000, immutable" in h["/packs/*"]
     assert "Cache-Control: public, max-age=300" in h["/index.json"]
 
 

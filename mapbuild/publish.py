@@ -2,9 +2,9 @@
 the index, and the map package.
 
     out/index.json                    what is here: the overview and each area
-                                      pack, with content-hashed file names
-    out/eesti/overview.<hash>.pmtiles
-    out/<path>/map.<hash>.pmtiles     one per area, at the area's path
+                                      pack, with where its pieces are
+    out/packs/eesti/<hash>/<n>.bin    the overview, in pieces
+    out/packs/<path>/<hash>/<n>.bin   one pack per area, in pieces
     out/lib/v1/...                    the map package (lib/v1 in the repository)
     out/_headers                      CORS and caching for Cloudflare Pages
 """
@@ -21,9 +21,13 @@ from . import area, overview
 from .sources import municipalities
 
 ROOT = Path(__file__).resolve().parents[1]
-# Cloudflare Pages serves no file over 25 MiB. MAPS_MAX_FILE (bytes) lets
-# the tests reach the limit with small packs.
-MAX_FILE = int(os.environ.get("MAPS_MAX_FILE", 25 * 1024 * 1024))
+# Cloudflare Pages answers no range request: it always sends the whole
+# file, and a PMTiles reader needs a few kilobytes at a time. So each pack
+# is served as pieces of this size, named by number, and the map package
+# reads the pieces a request needs. Clustered PMTiles keep neighbouring
+# tiles together, so one piece usually holds a view's tiles.
+# MAPS_CHUNK (bytes) lets the tests split small packs.
+CHUNK = int(os.environ.get("MAPS_CHUNK", 128 * 1024))
 
 # The map library the package loads, copied from node_modules.
 VENDOR = {
@@ -35,30 +39,29 @@ VENDOR = {
 }
 
 HEADERS = """\
-# Any site may use the maps: the tiles are read with range requests.
+# Any site may use the maps.
 /*
   Access-Control-Allow-Origin: *
-  Access-Control-Allow-Headers: Range
-  Access-Control-Expose-Headers: Content-Length, Content-Range, ETag
 /index.json
   Cache-Control: public, max-age=300
-/*.pmtiles
+/packs/*
   Cache-Control: public, max-age=31536000, immutable
 /lib/*
   Cache-Control: public, max-age=3600
 """
 
 
-def hashed(path: Path) -> Path:
-    """Rename map.pmtiles to map.<hash>.pmtiles, so a changed pack gets a
-    new name and browsers can cache each one for good."""
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
-    target = path.with_name(f"{path.stem}.{digest}{path.suffix}")
-    path.replace(target)
-    size = target.stat().st_size
-    if size > MAX_FILE:
-        raise SystemExit(f"maps: {target} is {size} bytes, over the Pages limit of {MAX_FILE}")
-    return target
+def pieces(pack: Path, out: Path, path: str) -> dict:
+    """Split a pack into out/packs/<path>/<hash>/<n>.bin and remove it. The
+    hash of its content names the folder, so a changed pack gets new names
+    and browsers can cache every piece for good."""
+    data = pack.read_bytes()
+    folder = Path("packs") / path / hashlib.sha256(data).hexdigest()[:12]
+    (out / folder).mkdir(parents=True)
+    for n, start in enumerate(range(0, len(data), CHUNK)):
+        (out / folder / f"{n}.bin").write_bytes(data[start:start + CHUNK])
+    pack.unlink()
+    return {"dir": folder.as_posix(), "size": len(data), "chunk": CHUNK}
 
 
 def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path) -> dict:
@@ -72,12 +75,13 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
 
     index = {"version": 1, "attribution": area.ATTRIBUTION, "overview": None, "areas": []}
     if (data / "national").exists():
-        ov = hashed(_built(lambda p: overview.build(data, p, tmp / "overview"), out / "eesti" / "overview.pmtiles"))
-        index["overview"] = ov.relative_to(out).as_posix()
+        pack = tmp / "overview.pmtiles"
+        overview.build(data, pack, tmp / "overview")
+        index["overview"] = pieces(pack, out, "eesti")
     for entry in areas:
-        pack = out / entry["path"] / "map.pmtiles"
-        meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"])
-        index["areas"].append({"path": entry["path"], **meta, "file": hashed(pack).relative_to(out).as_posix()})
+        pack = tmp / entry["path"] / "map.pmtiles"
+        meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"] / "layers")
+        index["areas"].append({"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])})
 
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     shutil.copytree(ROOT / "lib", out / "lib")
@@ -89,8 +93,3 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
     (out / "_headers").write_text(HEADERS, encoding="utf-8")
     return index
 
-
-def _built(make, path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    make(path)
-    return path

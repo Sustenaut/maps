@@ -33,15 +33,18 @@ to `/lib/v2/`. `lib/v1/map.js` documents every export.
 
 | Path | What |
 | --- | --- |
-| `index.json` | the overview and every area pack, with content-hashed file names, each area's name, EHAK code, extent and neighbours |
-| `eesti/overview.<hash>.pmtiles` | all of Estonia, zoom 5 to 10 |
-| `<path>/map.<hash>.pmtiles` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
+| `index.json` | the overview and every area pack (where its pieces are), each area's name, EHAK code, extent and neighbours |
+| `packs/eesti/<hash>/<n>.bin` | all of Estonia, zoom 5 to 10 |
+| `packs/<path>/<hash>/<n>.bin` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
 | `lib/v1/` | the map package, its fonts and the map library |
 
-Packs are cached for good (a new build gives a changed pack a new name);
-`index.json` for five minutes. Any origin may read them with range
-requests. Pages serves no file over 25 MiB, and the build stops if a pack
-would be bigger.
+Each pack is a PMTiles archive cut into numbered 128 KiB pieces. A PMTiles
+reader asks for a few kilobytes at a time with range requests, and
+Cloudflare Pages answers none: it always sends the whole file. So the
+package reads the pieces a request falls in instead. The folder is named
+by the pack's content, so pieces are cached for good and a changed pack
+gets new names; `index.json` is cached for five minutes. Any origin may
+read them.
 
 To add an area, add its EHAK name and path to `areas.json`.
 
