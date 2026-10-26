@@ -26,7 +26,11 @@ gsavalik.envir.ee. There is no OpenStreetMap data in the maps.
 ```
 
 The package loads MapLibre GL and PMTiles from this site, so a site needs
-nothing else. `/lib/v1/` only grows; a change that would break a site goes
+nothing else.
+
+Where no area pack covers the view, only the overview (zoom 5 to 10)
+draws, so the map stops zooming in there: the zoom-in button turns off and
+a note says why. Pass `detailNote` to `createMap` to translate it. `/lib/v1/` only grows; a change that would break a site goes
 to `/lib/v2/`. `lib/v1/map.js` documents every export.
 
 ## What the site serves
