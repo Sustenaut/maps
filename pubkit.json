@@ -7,5 +7,11 @@
       "test": "make functional",
       "shellcheck": "with-secrets bin/maps"
     }
+  },
+  "protect": {
+    "checks": [
+      "ci / passed"
+    ],
+    "tags": false
   }
 }
