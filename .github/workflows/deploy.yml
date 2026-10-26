@@ -44,7 +44,7 @@ jobs:
           cloudflare-project: sustenaut-maps
       - name: Check the site
         run: |
-          want=$(jq -r .overview _site/index.json)
+          want=$(jq -r .overview.dir _site/index.json)
           for i in $(seq 1 30); do
             curl -fs https://sustenaut-maps.pages.dev/index.json | grep -qF "$want" && exit 0
             sleep 5
