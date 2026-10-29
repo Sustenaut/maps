@@ -10,8 +10,8 @@ the index, and the map package.
     out/lib/v1/...                    the map package (lib/v1 in the repository)
     out/_headers                      CORS and caching for Cloudflare Pages
 
-With --cache, each pack is made through `pubkit cache run`, by the rules in
-pubkit.json's cache block: a pack whose inputs (its data, the municipality
+With --cache, each pack is made through `pubkit cache run`, by the entries
+of pubkit.json's cache block (`packs` per area, `overview`): a pack whose inputs (its data, the municipality
 boundaries, mapbuild's code and tippecanoe's version) have not changed is
 copied from the cache instead of made again, and `pubkit cache prune`
 then drops what this build did not use.
@@ -83,10 +83,10 @@ def pubkit() -> str:
     return os.environ.get("MAPS_PUBKIT") or (str(venv) if venv.exists() else "pubkit")
 
 
-def cached(root: Path, name: str, unit: dict, outputs: list[Path], command: list[str]) -> bool:
+def cached(root: Path, name: str, unit: str | None, outputs: list[Path], command: list[str]) -> bool:
     """Make `outputs` with `command` through `pubkit cache run`, in `root`,
-    where pubkit.json's cache rules are; True when they were reused."""
-    args = [pubkit(), "cache", "run", name, *[f"--unit={k}={v}" for k, v in unit.items()],
+    where pubkit.json's cache entries are; True when they were reused."""
+    args = [pubkit(), "cache", "run", name, *([f"--unit={unit}"] if unit is not None else []),
             *[f"--output={o}" for o in outputs], "--", *command]
     env = {**os.environ, "PYTHONPATH": str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", "")}
     done = subprocess.run(args, cwd=root, stdout=subprocess.PIPE, text=True, env=env)
@@ -98,8 +98,9 @@ def cached(root: Path, name: str, unit: dict, outputs: list[Path], command: list
 def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path, centres: Path,
           cache: Path | None = None) -> dict:
     """Write the site. With `cache`, the directory holding pubkit.json's
-    cache rules (the repository, as a rule), packs are made through
-    `pubkit cache run` there."""
+    cache entries (the repository, as a rule), packs are made through
+    `pubkit cache run` there. The entries name the data as `data/` in that
+    directory, so --data must be it."""
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
@@ -110,11 +111,14 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
 
     index = {"version": 1, "attribution": area.ATTRIBUTION, "overview": None, "areas": []}
     data = data.resolve()
+    if cache and data != (cache / "data").resolve():
+        raise SystemExit(f"maps: --cache fingerprints the data at {cache / 'data'} (pubkit.json's cache "
+                         f"entries), so build from it, not from {data}")
     hits, made = 0, 0
     if (data / "national").exists():
         pack = tmp / "overview.pmtiles"
         if cache:
-            hits += cached(cache, "overview", {"data": data}, [pack],
+            hits += cached(cache, "overview", None, [pack],
                            [sys.executable, "-m", "mapbuild", "build-overview", "--data", str(data), "--pack", str(pack)])
         else:
             overview.build(data, pack, tmp / "overview")
@@ -124,7 +128,7 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         pack = tmp / entry["path"] / "map.pmtiles"
         meta_file = tmp / entry["path"] / "meta.json"
         if cache:
-            hits += cached(cache, "packs", {"data": data, "path": entry["path"]}, [pack, meta_file],
+            hits += cached(cache, "packs", entry["path"], [pack, meta_file],
                            [sys.executable, "-m", "mapbuild", "build-area", entry["name"], entry["path"],
                             "--data", str(data), "--pack", str(pack), "--meta", str(meta_file)])
             meta = json.loads(meta_file.read_text(encoding="utf-8"))
@@ -146,6 +150,6 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
     shutil.copytree(ROOT / "site", out, dirs_exist_ok=True)
     (out / "_headers").write_text(HEADERS, encoding="utf-8")
     if cache:
-        print(f"maps: reused {hits} of {made} pack(s) (pubkit cache)")
+        print(f"maps: reused {hits} of {made} pack(s) through pubkit cache")
     return index
 

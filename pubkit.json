@@ -15,35 +15,31 @@
     "tags": false
   },
   "cache": {
-    "inputs": {
-      "data": {
-        "path": "data",
-        "refresh": "week"
-      }
+    "data": {
+      "path": "data",
+      "refresh": "week"
     },
-    "outputs": {
-      "packs": {
-        "dir": ".packcache/areas",
-        "unit": [
-          "{data}/areas/{path}/",
-          "{data}/boundaries.geojsonl"
-        ],
-        "shared": [
-          "mapbuild/*.py",
-          "tool: tippecanoe --version"
-        ]
-      },
-      "overview": {
-        "dir": ".packcache/overview",
-        "unit": [
-          "{data}/national/",
-          "{data}/boundaries.geojsonl"
-        ],
-        "shared": [
-          "mapbuild/*.py",
-          "tool: tippecanoe --version"
-        ]
-      }
+    "packs": {
+      "path": ".packcache",
+      "unit": "data/areas/{unit}/",
+      "inputs": [
+        "data/boundaries.geojsonl",
+        "mapbuild/*.py"
+      ],
+      "tools": [
+        "tippecanoe --version"
+      ]
+    },
+    "overview": {
+      "path": ".packcache/overview",
+      "inputs": [
+        "data/national/",
+        "data/boundaries.geojsonl",
+        "mapbuild/*.py"
+      ],
+      "tools": [
+        "tippecanoe --version"
+      ]
     }
   }
 }

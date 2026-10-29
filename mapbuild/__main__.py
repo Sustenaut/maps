@@ -13,7 +13,7 @@ the packs, index.json, the map package and the Pages headers. --areas is
 the list of areas to build (areas.json by default). --centres names the
 settlement each municipality is run from (centres.json by default), for
 municipalities.json. --cache makes each pack through `pubkit cache run`,
-by the rules in pubkit.json's cache block, so a pack whose inputs have not
+by the entries of pubkit.json's cache block, so a pack whose inputs have not
 changed is copied instead of made again (mapbuild/publish.py). build-area
 and build-overview make one pack each, as pubkit cache run calls them.
 """
@@ -43,9 +43,9 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--out", type=Path, default=Path("_site"))
             p.add_argument("--node-modules", type=Path, default=ROOT / "node_modules")
             p.add_argument("--cache", action="store_true",
-                           help="make packs through pubkit cache run, by pubkit.json's cache rules")
+                           help="make packs through pubkit cache run, by pubkit.json's cache entries")
             p.add_argument("--cache-root", type=Path, default=ROOT,
-                           help="where pubkit.json's cache rules are (the repository, unless testing)")
+                           help="where pubkit.json's cache entries are (the repository, unless testing)")
     # One pack at a time, as pubkit cache run calls them.
     p = sub.add_parser("build-area", help="make one area's pack and what the index says of it")
     p.add_argument("name")

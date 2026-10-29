@@ -150,13 +150,15 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 @given("a pack cache")
-def pack_cache(tmp_path: Path, env: dict) -> None:
+def pack_cache(tmp_path: Path, env: dict, data: Path) -> None:
     """A cache root of its own: the repository's pubkit.json, whose cache
-    rules make the packs, and its mapbuild, which they fingerprint."""
+    entries make the packs, its mapbuild and the sample data, which they
+    fingerprint as mapbuild/ and data/."""
     root = tmp_path / "cacheroot"
     root.mkdir()
     (root / "pubkit.json").write_text((REPO / "pubkit.json").read_text())
     (root / "mapbuild").symlink_to(REPO / "mapbuild")
+    (root / "data").symlink_to(data)
     env["cache"] = str(root)
 
 

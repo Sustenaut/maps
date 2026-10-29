@@ -44,8 +44,8 @@ jobs:
       - name: Install tippecanoe
         run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
       - run: make venv node
-      - name: Restore the week's data and the kept packs (pubkit.json's cache rules)
-        uses: Sustenaut/pubkit/actions/cache@dac919c76205061c55c28ab0038897b8305e29c3 # main after Sustenaut/pubkit#115; move to its release
+      - name: Restore the week's data and the kept packs (pubkit.json's cache entries)
+        uses: Sustenaut/pubkit/actions/cache@85d451534d55b2c3c6bc1698de9c029c50f2aa8c # Sustenaut/pubkit#121; move to its release
         with:
           step: restore
           fresh: ${{ inputs.fresh || false }}
@@ -54,7 +54,7 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@dac919c76205061c55c28ab0038897b8305e29c3 # main after Sustenaut/pubkit#115; move to its release
+        uses: Sustenaut/pubkit/actions/cache@85d451534d55b2c3c6bc1698de9c029c50f2aa8c # Sustenaut/pubkit#121; move to its release
         with:
           step: save
       - uses: Sustenaut/pubkit/actions/deploy-static@16cb82e94b7fc4f56dd1d545e289994f63eaba6a # v0.17.1

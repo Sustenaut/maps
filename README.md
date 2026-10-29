@@ -70,8 +70,8 @@ make functional     # the Gherkin suite, on small made-up data
 push to main and every Monday. It keeps the downloaded data for the ISO
 week, so only the first run of a week fetches it (run it by hand with
 `fresh` to fetch it anyway), and keeps the built packs: `bin/maps build
---cache` makes each pack through pubkit's `pubkit cache run`, by the rules
-in pubkit.json's `cache` block, so a pack whose inputs (its data, the
+--cache` makes each pack through pubkit's `pubkit cache run`, by the
+entries of pubkit.json's `cache` block (`data`, `packs`, `overview`), so a pack whose inputs (its data, the
 boundaries, mapbuild's code and tippecanoe's version) have not changed is
 copied, and a deploy that changes only `lib/` or `site/` builds nothing
 again. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
