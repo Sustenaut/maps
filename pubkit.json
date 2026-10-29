@@ -13,5 +13,8 @@
       "ci / passed"
     ],
     "tags": false
+  },
+  "site": {
+    "check_dir": "site"
   }
 }
