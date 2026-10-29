@@ -70,9 +70,11 @@ make functional     # the Gherkin suite, on small made-up data
 push to main and every Monday. It keeps the downloaded data for the ISO
 week, so only the first run of a week fetches it (run it by hand with
 `fresh` to fetch it anyway), and keeps the built packs: `bin/maps build
---cache DIR` reuses a pack whose inputs (its data, the boundaries, mapbuild's
-code and tippecanoe's version) have not changed, so a deploy that changes
-only `lib/` or `site/` builds nothing again. It runs once the repository variable
+--cache` makes each pack through pubkit's `pubkit cache run`, by the
+entries of pubkit.json's `cache` block (`data`, `packs`, `overview`), so a pack whose inputs (its data, the
+boundaries, mapbuild's code and tippecanoe's version) have not changed is
+copied, and a deploy that changes only `lib/` or `site/` builds nothing
+again. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
 `MAPS_DEPLOY` is `on`, with the Actions secret `CLOUDFLARE_GITHUB_API_TOKEN`
 and variable `CLOUDFLARE_ACCOUNT_ID`. The Pages project `sustenaut-maps`
 and the DNS name come from schryer/business-plan's infrastructure.

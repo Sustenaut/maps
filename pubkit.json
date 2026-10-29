@@ -14,6 +14,34 @@
     ],
     "tags": false
   },
+  "cache": {
+    "data": {
+      "path": "data",
+      "refresh": "week"
+    },
+    "packs": {
+      "path": ".packcache",
+      "unit": "data/areas/{unit}/",
+      "inputs": [
+        "data/boundaries.geojsonl",
+        "mapbuild/*.py"
+      ],
+      "tools": [
+        "tippecanoe --version"
+      ]
+    },
+    "overview": {
+      "path": ".packcache/overview",
+      "inputs": [
+        "data/national/",
+        "data/boundaries.geojsonl",
+        "mapbuild/*.py"
+      ],
+      "tools": [
+        "tippecanoe --version"
+      ]
+    }
+  },
   "site": {
     "check_dir": "site"
   }

@@ -9,25 +9,41 @@ permissions:
   contents: read
 
 jobs:
+  # Whether the merge queue already passed this commit: then the jobs
+  # that only test it are skipped, and nothing here tests less than the
+  # queue did.
+  tested:
+    name: ci
+    uses: Sustenaut/pubkit/.github/workflows/job-tested.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+    permissions:
+      actions: read
+      contents: read
+
   checks:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@724684ec5a40ffb62414d72915bc65b1b7476d9f # v0.18.0
+    needs: [tested]
+    if: ${{ needs.tested.outputs.tested != 'true' }}
+    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@724684ec5a40ffb62414d72915bc65b1b7476d9f # v0.18.0
+    needs: [tested]
+    if: ${{ needs.tested.outputs.tested != 'true' }}
+    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
     with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
 
   # The one check a ruleset requires: it passes only when every job
-  # above succeeded. None of them is ever skipped for not being asked for.
+  # above succeeded or, where the merge queue already passed the
+  # commit, was skipped for it. None is skipped for not being asked for.
   passed:
     name: ci / passed
     if: always()
-    needs: [checks, tests]
+    needs: [tested, checks, tests]
     runs-on: ubuntu-latest
     steps:
       - run: |
           echo "$RESULTS"
-          echo "$RESULTS" | jq -e 'all(.[]; .result == "success")' > /dev/null
-        env: { RESULTS: '${{ toJSON(needs) }}' }
+          echo "$RESULTS" | jq -e --arg tested "$TESTED" '.tested.result == "success"
+            and all(.[]; .result == "success" or (.result == "skipped" and $tested == "true"))' > /dev/null
+        env: { RESULTS: '${{ toJSON(needs) }}', TESTED: '${{ needs.tested.outputs.tested }}' }
