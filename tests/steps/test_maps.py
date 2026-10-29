@@ -141,14 +141,23 @@ def build(run, binary, tmp_path: Path, data: Path, env: dict, a, a_path, b, b_pa
     areas = tmp_path / "areas.json"
     areas.write_text(json.dumps({"areas": [{"name": a, "path": a_path}, {"name": b, "path": b_path}]}))
     centres = ["--centres", env.pop("centres")] if "centres" in env else []
-    cache = ["--cache", env["cache"]] if "cache" in env else []
+    cache = ["--cache", "--cache-root", env["cache"]] if "cache" in env else []
     return run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site", *centres,
                *cache, env={k: v for k, v in env.items() if k != "cache"}, timeout=600)
 
 
+REPO = Path(__file__).resolve().parents[2]
+
+
 @given("a pack cache")
 def pack_cache(tmp_path: Path, env: dict) -> None:
-    env["cache"] = str(tmp_path / "packcache")
+    """A cache root of its own: the repository's pubkit.json, whose cache
+    rules make the packs, and its mapbuild, which they fingerprint."""
+    root = tmp_path / "cacheroot"
+    root.mkdir()
+    (root / "pubkit.json").write_text((REPO / "pubkit.json").read_text())
+    (root / "mapbuild").symlink_to(REPO / "mapbuild")
+    env["cache"] = str(root)
 
 
 @when("I note index.json", target_fixture="noted")
@@ -178,7 +187,7 @@ def only_changed(site: Path, noted: dict, path: str) -> None:
 
 @then(parsers.parse("the pack cache holds {count:d} packs"))
 def cache_holds(env: dict, count: int) -> None:
-    assert len(list(Path(env["cache"]).glob("*.pmtiles"))) == count
+    assert len(list((Path(env["cache"]) / ".packcache").rglob("*.pmtiles"))) == count
 
 
 @pytest.fixture

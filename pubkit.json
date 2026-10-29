@@ -13,5 +13,37 @@
       "ci / passed"
     ],
     "tags": false
+  },
+  "cache": {
+    "inputs": {
+      "data": {
+        "path": "data",
+        "refresh": "week"
+      }
+    },
+    "outputs": {
+      "packs": {
+        "dir": ".packcache/areas",
+        "unit": [
+          "{data}/areas/{path}/",
+          "{data}/boundaries.geojsonl"
+        ],
+        "shared": [
+          "mapbuild/*.py",
+          "tool: tippecanoe --version"
+        ]
+      },
+      "overview": {
+        "dir": ".packcache/overview",
+        "unit": [
+          "{data}/national/",
+          "{data}/boundaries.geojsonl"
+        ],
+        "shared": [
+          "mapbuild/*.py",
+          "tool: tippecanoe --version"
+        ]
+      }
+    }
   }
 }

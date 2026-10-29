@@ -10,12 +10,11 @@ the index, and the map package.
     out/lib/v1/...                    the map package (lib/v1 in the repository)
     out/_headers                      CORS and caching for Cloudflare Pages
 
-With a cache directory, a pack whose inputs have not changed is not built
-again: each pack is kept there under a fingerprint of what made it (its
-data files, the municipality boundaries, mapbuild's code and tippecanoe's
-version), and reused while the fingerprint matches. Packs no longer made
-are removed from the cache after each build, so it never grows past one
-build's packs.
+With --cache, each pack is made through `pubkit cache run`, by the rules in
+pubkit.json's cache block: a pack whose inputs (its data, the municipality
+boundaries, mapbuild's code and tippecanoe's version) have not changed is
+copied from the cache instead of made again, and `pubkit cache prune`
+then drops what this build did not use.
 """
 
 from __future__ import annotations
@@ -25,6 +24,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from . import area, municipalities as municipality_list, overview
@@ -76,67 +76,30 @@ def pieces(pack: Path, out: Path, path: str) -> dict:
     return {"dir": folder.as_posix(), "size": len(data), "chunk": CHUNK}
 
 
-def code_fingerprint() -> str:
-    """What every pack depends on besides its data: mapbuild's code and
-    tippecanoe's version."""
-    h = hashlib.sha256()
-    for f in sorted((ROOT / "mapbuild").glob("*.py")):
-        h.update(f.name.encode() + b"\0" + f.read_bytes() + b"\0")
-    try:
-        version = subprocess.run(["tippecanoe", "--version"], capture_output=True, text=True).stderr
-    except FileNotFoundError:
-        version = "no tippecanoe"
-    h.update(version.strip().encode())
-    return h.hexdigest()
+def pubkit() -> str:
+    """The pubkit to make packs through: MAPS_PUBKIT, this repository's
+    .venv, or the one on PATH."""
+    venv = ROOT / ".venv" / "bin" / "pubkit"
+    return os.environ.get("MAPS_PUBKIT") or (str(venv) if venv.exists() else "pubkit")
 
 
-def fingerprint(base: str, *inputs: Path, label: str) -> str:
-    """A pack's fingerprint: `base`, `label`, and every file in `inputs`
-    (a file, or a directory read whole), by name and content."""
-    h = hashlib.sha256(base.encode() + b"\0" + label.encode() + b"\0")
-    for root in inputs:
-        files = sorted(p for p in root.rglob("*") if p.is_file()) if root.is_dir() else [root] if root.exists() else []
-        for f in files:
-            h.update(str(f.relative_to(root.parent)).encode() + b"\0" + f.read_bytes() + b"\0")
-    return h.hexdigest()[:32]
-
-
-class PackCache:
-    """Packs kept under their fingerprints: <key>.pmtiles, and <key>.json for
-    what the index says of an area. No directory: nothing is kept."""
-
-    def __init__(self, root: Path | None):
-        self.root, self.used, self.hits = root, set(), 0
-        if root:
-            root.mkdir(parents=True, exist_ok=True)
-
-    def get(self, key: str, pack: Path) -> dict | None:
-        if not self.root or not (self.root / f"{key}.pmtiles").exists():
-            return None
-        pack.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(self.root / f"{key}.pmtiles", pack)
-        meta = self.root / f"{key}.json"
-        self.used.add(key)
-        self.hits += 1
-        return json.loads(meta.read_text(encoding="utf-8")) if meta.exists() else {}
-
-    def put(self, key: str, pack: Path, meta: dict | None = None) -> None:
-        if not self.root:
-            return
-        shutil.copy(pack, self.root / f"{key}.pmtiles")
-        if meta is not None:
-            (self.root / f"{key}.json").write_text(json.dumps(meta), encoding="utf-8")
-        self.used.add(key)
-
-    def prune(self) -> None:
-        if self.root:
-            for f in self.root.iterdir():
-                if f.stem not in self.used:
-                    f.unlink()
+def cached(root: Path, name: str, unit: dict, outputs: list[Path], command: list[str]) -> bool:
+    """Make `outputs` with `command` through `pubkit cache run`, in `root`,
+    where pubkit.json's cache rules are; True when they were reused."""
+    args = [pubkit(), "cache", "run", name, *[f"--unit={k}={v}" for k, v in unit.items()],
+            *[f"--output={o}" for o in outputs], "--", *command]
+    env = {**os.environ, "PYTHONPATH": str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", "")}
+    done = subprocess.run(args, cwd=root, stdout=subprocess.PIPE, text=True, env=env)
+    if done.returncode:
+        raise SystemExit(f"maps: pubkit cache run {name} failed (exit {done.returncode})")
+    return done.stdout.startswith("reused")
 
 
 def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path, centres: Path,
           cache: Path | None = None) -> dict:
+    """Write the site. With `cache`, the directory holding pubkit.json's
+    cache rules (the repository, as a rule), packs are made through
+    `pubkit cache run` there."""
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
@@ -146,27 +109,31 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         raise SystemExit(f"maps: not municipalities in {data / 'boundaries.geojsonl'}: {', '.join(unknown)}")
 
     index = {"version": 1, "attribution": area.ATTRIBUTION, "overview": None, "areas": []}
-    kept = PackCache(cache)
-    code = code_fingerprint()
-    boundaries = data / "boundaries.geojsonl"
+    data = data.resolve()
+    hits, made = 0, 0
     if (data / "national").exists():
         pack = tmp / "overview.pmtiles"
-        key = fingerprint(code, data / "national", boundaries, label="overview")
-        if kept.get(key, pack) is None:
+        if cache:
+            hits += cached(cache, "overview", {"data": data}, [pack],
+                           [sys.executable, "-m", "mapbuild", "build-overview", "--data", str(data), "--pack", str(pack)])
+        else:
             overview.build(data, pack, tmp / "overview")
-            kept.put(key, pack)
+        made += 1
         index["overview"] = pieces(pack, out, "eesti")
     for entry in areas:
         pack = tmp / entry["path"] / "map.pmtiles"
-        key = fingerprint(code, data / "areas" / entry["path"], boundaries,
-                          label=f"{entry['name']}\0{entry['path']}")
-        meta = kept.get(key, pack)
-        if meta is None:
+        meta_file = tmp / entry["path"] / "meta.json"
+        if cache:
+            hits += cached(cache, "packs", {"data": data, "path": entry["path"]}, [pack, meta_file],
+                           [sys.executable, "-m", "mapbuild", "build-area", entry["name"], entry["path"],
+                            "--data", str(data), "--pack", str(pack), "--meta", str(meta_file)])
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        else:
             meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"] / "layers")
-            kept.put(key, pack, meta)
+        made += 1
         index["areas"].append({"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])})
-    kept.prune()
-    index_hits = kept.hits
+    if cache:
+        subprocess.run([pubkit(), "cache", "prune"], cwd=cache, check=True, stdout=subprocess.DEVNULL)
 
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     listed = municipality_list.build(data, centres)
@@ -179,6 +146,6 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
     shutil.copytree(ROOT / "site", out, dirs_exist_ok=True)
     (out / "_headers").write_text(HEADERS, encoding="utf-8")
     if cache:
-        print(f"maps: reused {index_hits} of {len(areas) + (1 if index['overview'] else 0)} pack(s) from {cache}")
+        print(f"maps: reused {hits} of {made} pack(s) (pubkit cache)")
     return index
 

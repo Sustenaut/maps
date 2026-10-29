@@ -8,12 +8,12 @@
 # the Actions variable CLOUDFLARE_ACCOUNT_ID. It stays off until those
 # exist: set the repository variable MAPS_DEPLOY to "on".
 #
-# Two caches make a deploy that changes no data quick. The downloaded data
-# is kept for the ISO week, so the Monday build fetches it fresh and a push
-# later that week reuses it (run by hand with "fresh" to fetch it anyway).
-# The built packs are kept under a fingerprint of their inputs, so only an
+# pubkit's actions/cache keeps what pubkit.json's cache block names, so a
+# deploy that changes no data is quick: the downloaded data for the ISO
+# week (the Monday build fetches it fresh; run by hand with "fresh" to fetch
+# it anyway), and each pack under a fingerprint of its inputs, so only an
 # area whose data or build changed goes through tippecanoe again
-# (mapbuild/publish.py).
+# (bin/maps build --cache, through pubkit cache run).
 name: deploy
 
 on:
@@ -44,25 +44,19 @@ jobs:
       - name: Install tippecanoe
         run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
       - run: make venv node
-      - name: The week, which names the data cache
-        id: week
-        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
-      - name: Keep the downloaded data for the week
-        if: ${{ !inputs.fresh }}
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - name: Restore the week's data and the kept packs (pubkit.json's cache rules)
+        uses: Sustenaut/pubkit/actions/cache@dac919c76205061c55c28ab0038897b8305e29c3 # main after Sustenaut/pubkit#115; move to its release
         with:
-          path: data
-          key: maps-data-${{ steps.week.outputs.week }}
-      - name: Keep the built packs
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .packcache
-          key: maps-packs-${{ github.run_id }}
-          restore-keys: maps-packs-
+          step: restore
+          fresh: ${{ inputs.fresh || false }}
       - name: Download the data
         run: bin/maps download
       - name: Build the site
-        run: bin/maps build --cache .packcache
+        run: bin/maps build --cache
+      - name: Keep the data and the packs for the next run
+        uses: Sustenaut/pubkit/actions/cache@dac919c76205061c55c28ab0038897b8305e29c3 # main after Sustenaut/pubkit#115; move to its release
+        with:
+          step: save
       - uses: Sustenaut/pubkit/actions/deploy-static@16cb82e94b7fc4f56dd1d545e289994f63eaba6a # v0.17.1
         with:
           dir: _site
