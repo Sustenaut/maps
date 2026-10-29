@@ -1,7 +1,7 @@
 """maps: download Estonia's map data and build maps.sustenaut.eu.
 
     maps download [--data DIR] [--areas FILE] [--centres FILE]
-    maps build [--data DIR] [--out DIR] [--areas FILE] [--centres FILE]
+    maps build [--data DIR] [--out DIR] [--areas FILE] [--centres FILE] [--cache DIR]
 
 download reads the municipality boundaries, the national overview's
 layers and each area's layers from the state WFS into --data (data/ by
@@ -10,7 +10,9 @@ missing. build turns them into the site in --out (_site/ by default):
 the packs, index.json, the map package and the Pages headers. --areas is
 the list of areas to build (areas.json by default). --centres names the
 settlement each municipality is run from (centres.json by default), for
-municipalities.json.
+municipalities.json. --cache keeps the packs it builds, under a
+fingerprint of their inputs, and reuses those whose inputs have not
+changed (mapbuild/publish.py).
 """
 
 from __future__ import annotations
@@ -37,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
         if name == "build":
             p.add_argument("--out", type=Path, default=Path("_site"))
             p.add_argument("--node-modules", type=Path, default=ROOT / "node_modules")
+            p.add_argument("--cache", type=Path, default=None,
+                           help="keep packs here and reuse those whose inputs have not changed")
     args = parser.parse_args(argv)
 
     areas = json.loads(args.areas.read_text(encoding="utf-8"))["areas"]
@@ -48,7 +52,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     with tempfile.TemporaryDirectory() as tmp:
-        index = publish.build(args.data, args.out, args.areas, args.node_modules, Path(tmp), args.centres)
+        index = publish.build(args.data, args.out, args.areas, args.node_modules, Path(tmp), args.centres,
+                              cache=args.cache)
     print(f"maps: built {args.out}: the overview and {len(index['areas'])} area pack(s)")
     return 0
 

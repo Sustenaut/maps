@@ -141,8 +141,44 @@ def build(run, binary, tmp_path: Path, data: Path, env: dict, a, a_path, b, b_pa
     areas = tmp_path / "areas.json"
     areas.write_text(json.dumps({"areas": [{"name": a, "path": a_path}, {"name": b, "path": b_path}]}))
     centres = ["--centres", env.pop("centres")] if "centres" in env else []
+    cache = ["--cache", env["cache"]] if "cache" in env else []
     return run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site", *centres,
-               env=env, timeout=600)
+               *cache, env={k: v for k, v in env.items() if k != "cache"}, timeout=600)
+
+
+@given("a pack cache")
+def pack_cache(tmp_path: Path, env: dict) -> None:
+    env["cache"] = str(tmp_path / "packcache")
+
+
+@when("I note index.json", target_fixture="noted")
+def note_index(site: Path) -> dict:
+    return index(site)
+
+
+@when(parsers.parse('the data of "{path}" changes'))
+def data_changes(data: Path, path: str) -> None:
+    roads = sorted((data / "areas" / path).glob("*.geojsonl"))[0]
+    lines = roads.read_text(encoding="utf-8").splitlines()
+    roads.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")
+
+
+@then("index.json is as noted")
+def same_index(site: Path, noted: dict) -> None:
+    assert index(site) == noted
+
+
+@then(parsers.parse('only the pack of "{path}" is new since noted'))
+def only_changed(site: Path, noted: dict, path: str) -> None:
+    before = {a["path"]: a["pack"]["dir"] for a in noted["areas"]}
+    after = {a["path"]: a["pack"]["dir"] for a in index(site)["areas"]}
+    assert {p for p in after if after[p] != before[p]} == {path}, (before, after)
+    assert index(site)["overview"] == noted["overview"]
+
+
+@then(parsers.parse("the pack cache holds {count:d} packs"))
+def cache_holds(env: dict, count: int) -> None:
+    assert len(list(Path(env["cache"]).glob("*.pmtiles"))) == count
 
 
 @pytest.fixture
