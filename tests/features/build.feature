@@ -66,3 +66,20 @@ Feature: Building the site
     Then it succeeds
     And the pack of "louna/alfa" is in more than one piece of 4096 bytes
     And every pack's pieces join into a PMTiles archive named by its content
+
+  Scenario: With a pack cache, a pack whose inputs have not changed is not built again
+    Given a pack cache
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it succeeds
+    And it prints "maps: reused 0 of 3 pack(s)"
+    When I note index.json
+    And I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it succeeds
+    And it prints "maps: reused 3 of 3 pack(s)"
+    And index.json is as noted
+    When the data of "louna/beeta" changes
+    And I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it succeeds
+    And it prints "maps: reused 2 of 3 pack(s)"
+    And only the pack of "louna/beeta" is new since noted
+    And the pack cache holds 3 packs
