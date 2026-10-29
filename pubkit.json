@@ -41,5 +41,8 @@
         "tippecanoe --version"
       ]
     }
+  },
+  "site": {
+    "check_dir": "site"
   }
 }
