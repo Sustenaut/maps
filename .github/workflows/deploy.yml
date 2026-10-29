@@ -36,7 +36,7 @@ jobs:
         run: bin/maps download
       - name: Build the site
         run: bin/maps build
-      - uses: Sustenaut/pubkit/actions/deploy-static@f0984614ce18dd9f5eedfb7a39451c2bff89d232 # v0.17.0
+      - uses: Sustenaut/pubkit/actions/deploy-static@16cb82e94b7fc4f56dd1d545e289994f63eaba6a # v0.17.1
         with:
           dir: _site
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}
