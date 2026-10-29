@@ -45,7 +45,7 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
       - run: make venv node
       - name: Restore the week's data and the kept packs (pubkit.json's cache entries)
-        uses: Sustenaut/pubkit/actions/cache@85d451534d55b2c3c6bc1698de9c029c50f2aa8c # Sustenaut/pubkit#121; move to its release
+        uses: Sustenaut/pubkit/actions/cache@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
         with:
           step: restore
           fresh: ${{ inputs.fresh || false }}
@@ -54,10 +54,10 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@85d451534d55b2c3c6bc1698de9c029c50f2aa8c # Sustenaut/pubkit#121; move to its release
+        uses: Sustenaut/pubkit/actions/cache@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
         with:
           step: save
-      - uses: Sustenaut/pubkit/actions/deploy-static@16cb82e94b7fc4f56dd1d545e289994f63eaba6a # v0.17.1
+      - uses: Sustenaut/pubkit/actions/deploy-static@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
         with:
           dir: _site
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}
