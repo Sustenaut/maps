@@ -1,0 +1,9 @@
+# The functional suite's coverage, for SonarQube Cloud: mapbuild, as the
+# programs the suite starts (bin/maps, pubkit cache run) run it.
+[run]
+source = mapbuild
+patch = subprocess
+parallel = true
+
+[xml]
+output = coverage/coverage.xml
