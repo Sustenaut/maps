@@ -84,9 +84,10 @@ keeps the downloaded data from run to run, fetching only what is missing
 run`, by the entries of pubkit.json's `cache` block (`data`, `packs`,
 `overview`), so a pack whose inputs (its data and places, the boundaries,
 mapbuild's code and tippecanoe's version) have not changed is copied, and
-a deploy that changes only `lib/` or `site/` builds nothing again. Run it
-by hand with `refresh` to restore nothing, so all the data is fetched and
-every pack made anew. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
+a deploy that changes only `lib/` or `site/` builds nothing again. Label a
+pull request `refresh cache` to have its deploy, once it merges, restore
+nothing, so all the data is fetched and every pack made anew (pubkit's
+`actions/pr-label`); a run by hand with `refresh` does the same. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
 `MAPS_DEPLOY` is `on`, with the Actions secret `CLOUDFLARE_GITHUB_API_TOKEN`
 and variable `CLOUDFLARE_ACCOUNT_ID`. The Pages project `sustenaut-maps`
 and the DNS name come from schryer/business-plan's infrastructure.
