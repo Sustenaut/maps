@@ -12,13 +12,20 @@ permissions:
 jobs:
   checks:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
+    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@24b6c7ba012a758fa9741c530d224ddad3f2c0dc # v0.24.0
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
+    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@24b6c7ba012a758fa9741c530d224ddad3f2c0dc # v0.24.0
     with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
+
+  sonar:
+    name: ci
+    needs: [tests]
+    uses: Sustenaut/pubkit/.github/workflows/job-sonar.yml@24b6c7ba012a758fa9741c530d224ddad3f2c0dc # v0.24.0
+    with: {"reports": "sonar.python.coverage.reportPaths=*.xml sonar.javascript.lcov.reportPaths=lcov.info"}
+    secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   # The site as deploy-static checks it before a deploy, so a site that
   # would fail to deploy fails the pull request. It deploys nothing.
@@ -27,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - uses: Sustenaut/pubkit/actions/deploy-static@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
+      - uses: Sustenaut/pubkit/actions/deploy-static@24b6c7ba012a758fa9741c530d224ddad3f2c0dc # v0.24.0
         with: {"dir": "site", "check-only": "true"}
 
   # The one check a ruleset requires: it passes only when every job
@@ -35,7 +42,7 @@ jobs:
   passed:
     name: ci / passed
     if: always()
-    needs: [checks, tests, site]
+    needs: [checks, tests, sonar, site]
     runs-on: ubuntu-latest
     steps:
       - run: |

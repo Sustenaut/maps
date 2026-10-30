@@ -24,9 +24,14 @@ $(VENV)/.done: tests/requirements.lock
 	$(VENV)/bin/pip install --quiet --require-hashes -r tests/requirements.lock
 	touch $@
 
-# The Gherkin suite, run against bin/maps.
+# The Gherkin suite, run against bin/maps, with its coverage in
+# coverage/coverage.xml for SonarQube Cloud (.coveragerc).
 functional: venv node
-	cd tests && MAPS_BIN_DIR=$(CURDIR)/bin ../$(VENV)/bin/pytest -n auto
+	rm -rf coverage && mkdir coverage
+	cd tests && COVERAGE_RCFILE=$(CURDIR)/.coveragerc COVERAGE_FILE=$(CURDIR)/coverage/.coverage \
+	  MAPS_BIN_DIR=$(CURDIR)/bin ../$(VENV)/bin/coverage run -m pytest -n auto
+	COVERAGE_RCFILE=.coveragerc COVERAGE_FILE=coverage/.coverage $(VENV)/bin/coverage combine -q
+	COVERAGE_RCFILE=.coveragerc COVERAGE_FILE=coverage/.coverage $(VENV)/bin/coverage xml -q
 
 lock: venv
 	$(VENV)/bin/pubkit lock
