@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 from . import area, municipalities as municipality_list, overview
+from .places import checked
 from .sources import municipalities
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -105,6 +106,8 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         shutil.rmtree(out)
     out.mkdir(parents=True)
     areas = json.loads(areas_file.read_text(encoding="utf-8"))["areas"]
+    for entry in areas:
+        checked(entry["path"])
     unknown = [a["name"] for a in areas if a["name"] not in municipalities(data)]
     if unknown:
         raise SystemExit(f"maps: not municipalities in {data / 'boundaries.geojsonl'}: {', '.join(unknown)}")

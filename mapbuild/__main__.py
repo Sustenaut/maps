@@ -36,7 +36,7 @@ from . import places, publish, sources
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="maps", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("download", "build"):
@@ -62,38 +62,44 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--data", type=Path, required=True)
     p.add_argument("--pack", type=Path, required=True)
     args = parser.parse_args(argv)
-    if args.command in ("build-area", "build-overview"):
-        from . import area, overview
-        args.pack.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory() as tmp:
-            if args.command == "build-overview":
-                overview.build(args.data, args.pack, Path(tmp))
-                return 0
-            meta = area.build(args.data, args.name, args.path, args.pack, Path(tmp))
-        args.meta.write_text(json.dumps(meta), encoding="utf-8")
-        return 0
+    {"build-area": build_area, "build-overview": build_overview,
+     "download": download, "build": build}[args.command](args)
 
-    if args.command == "download":
-        sources.boundaries(args.data)
-        areas = places.plan(args.data, args.areas or ROOT / "areas.json")
-        places.write_plan(args.data, areas)
-        sources.national(args.data, args.centres)
-        for entry in areas:
-            if places.keep(args.data, entry):
-                print(f"maps: the places in {entry['path']} changed, so its data is fetched again", file=sys.stderr)
-            sources.area(args.data, entry["name"], entry["path"])
-        return 0
 
+def build_area(args: argparse.Namespace) -> None:
+    from . import area
+    args.pack.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        meta = area.build(args.data, args.name, places.checked(args.path), args.pack, Path(tmp))
+    args.meta.write_text(json.dumps(meta), encoding="utf-8")
+
+
+def build_overview(args: argparse.Namespace) -> None:
+    from . import overview
+    args.pack.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        overview.build(args.data, args.pack, Path(tmp))
+
+
+def download(args: argparse.Namespace) -> None:
+    sources.boundaries(args.data)
+    areas = places.plan(args.data, args.areas or ROOT / "areas.json")
+    places.write_plan(args.data, areas)
+    sources.national(args.data, args.centres)
+    for entry in areas:
+        if places.keep(args.data, entry):
+            print(f"maps: the places in {entry['path']} changed, so its data is fetched again", file=sys.stderr)
+        sources.area(args.data, entry["name"], entry["path"])
+
+
+def build(args: argparse.Namespace) -> None:
     if args.areas is None:
         planned = args.data / places.PLAN
         args.areas = planned if planned.is_file() else ROOT / "areas.json"
-
     with tempfile.TemporaryDirectory() as tmp:
         index = publish.build(args.data, args.out, args.areas, args.node_modules, Path(tmp), args.centres,
                               cache=args.cache_root if args.cache else None)
     print(f"maps: built {args.out}: the overview and {len(index['areas'])} area pack(s)")
-    return 0
-
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
