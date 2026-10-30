@@ -23,6 +23,7 @@ place is added to or removed from its area (or the cache is refreshed).
 from __future__ import annotations
 
 import json
+import re
 import sys
 import unicodedata
 import urllib.request
@@ -34,6 +35,17 @@ from shapely.strtree import STRtree
 from .sources import municipalities
 
 PLAN = "areas.json"
+# An area's path: lower-case words joined by - and /, such as vorumaa/rouge.
+AREA_PATH = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)*")
+
+
+def checked(path: str) -> str:
+    """The path, when it is an area's. It names folders under data/areas,
+    the build's and the site's, so one such as ../x would reach outside
+    them."""
+    if not isinstance(path, str) or not AREA_PATH.fullmatch(path):
+        raise SystemExit(f"maps: not an area path: {path!r}")
+    return path
 
 
 def read_places(source: str, base: Path) -> list[dict]:
@@ -103,7 +115,7 @@ def plan(data: Path, areas_file: Path) -> list[dict]:
             if not home:
                 raise SystemExit(f"maps: {name} has no county in {data / 'boundaries.geojsonl'}")
             path = f"{county(home)}/{slug(name, every)}"
-        out.append({"name": name, "path": path, "places": sorted(found.get(name, ()))})
+        out.append({"name": name, "path": checked(path), "places": sorted(found.get(name, ()))})
     return sorted(out, key=lambda a: a["path"])
 
 
@@ -117,7 +129,7 @@ def keep(data: Path, entry: dict) -> bool:
     """Note the area's places beside its data. When they differ from what
     was noted, its layers are dropped, so the download fetches them again
     and the pack is made again; True then."""
-    folder = data / "areas" / entry["path"]
+    folder = data / "areas" / checked(entry["path"])
     noted = folder / "places.json"
     places = json.dumps(entry["places"], ensure_ascii=False) + "\n"
     changed = noted.is_file() and noted.read_text(encoding="utf-8") != places

@@ -28,6 +28,11 @@ Feature: Downloading the data
     Then it fails
     And stderr mentions "Gamma vald"
 
+  Scenario: An area whose path reaches outside the data stops the download
+    When I download the area "Alfa vald" at "../alfa"
+    Then it fails
+    And stderr mentions "not an area path"
+
   Scenario: Each municipality a place is in gets an area, at its county and name
     Given a site has the place "torn" at 57.72, 26.95
     And a site has the place "jarv" at 57.73, 26.96

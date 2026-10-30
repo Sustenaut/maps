@@ -60,6 +60,11 @@ Feature: Building the site
     Then it fails
     And stderr mentions "Gamma vald"
 
+  Scenario: An area whose path reaches outside the site stops the build
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/../../beeta"
+    Then it fails
+    And stderr mentions "not an area path"
+
   Scenario: A pack is split into pieces of the same size
     Given pieces of 4096 bytes
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
