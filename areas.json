@@ -4,6 +4,9 @@
     { "name": "Rõuge vald", "path": "louna-eesti/rouge" },
     { "name": "Võru vald", "path": "louna-eesti/voru-vald" },
     { "name": "Võru linn", "path": "louna-eesti/voru" },
-    { "name": "Antsla vald", "path": "louna-eesti/antsla" }
+    { "name": "Antsla vald", "path": "louna-eesti/antsla" },
+    { "name": "Kanepi vald", "path": "louna-eesti/kanepi" },
+    { "name": "Põlva vald", "path": "louna-eesti/polva" },
+    { "name": "Valga vald", "path": "louna-eesti/valga" }
   ]
 }
