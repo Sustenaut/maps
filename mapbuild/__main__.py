@@ -8,14 +8,19 @@
 download reads the municipality boundaries, the national overview's
 layers and each area's layers from the state WFS into --data (data/ by
 default); a finished layer is kept, so a second run only fetches what is
-missing. build turns them into the site in --out (_site/ by default):
-the packs, index.json, the map package and the Pages headers. --areas is
-the list of areas to build (areas.json by default). --centres names the
-settlement each municipality is run from (centres.json by default), for
+missing. --areas (areas.json by default) says which areas: the ones it
+lists, and each municipality a site's place is in (mapbuild/places.py).
+download writes them, with their places, to DIR/areas.json, and fetches
+an area's layers again when its places change. build turns them into the
+site in --out (_site/ by default): the packs, index.json, the map package
+and the Pages headers, for the areas in --areas (DIR/areas.json, as
+download left it, by default). --centres names the settlement each
+municipality is run from (centres.json by default), for
 municipalities.json. --cache makes each pack through `pubkit cache run`,
-by the entries of pubkit.json's cache block, so a pack whose inputs have not
-changed is copied instead of made again (mapbuild/publish.py). build-area
-and build-overview make one pack each, as pubkit cache run calls them.
+by the entries of pubkit.json's cache block, so a pack whose inputs have
+not changed is copied instead of made again (mapbuild/publish.py).
+build-area and build-overview make one pack each, as pubkit cache run
+calls them.
 """
 
 from __future__ import annotations
@@ -26,7 +31,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import publish, sources
+from . import places, publish, sources
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("download", "build"):
         p = sub.add_parser(name)
         p.add_argument("--data", type=Path, default=Path("data"))
-        p.add_argument("--areas", type=Path, default=ROOT / "areas.json")
+        p.add_argument("--areas", type=Path, default=None)
         p.add_argument("--centres", type=Path, default=ROOT / "centres.json")
         if name == "build":
             p.add_argument("--out", type=Path, default=Path("_site"))
@@ -68,13 +73,20 @@ def main(argv: list[str] | None = None) -> int:
         args.meta.write_text(json.dumps(meta), encoding="utf-8")
         return 0
 
-    areas = json.loads(args.areas.read_text(encoding="utf-8"))["areas"]
     if args.command == "download":
         sources.boundaries(args.data)
+        areas = places.plan(args.data, args.areas or ROOT / "areas.json")
+        places.write_plan(args.data, areas)
         sources.national(args.data, args.centres)
         for entry in areas:
+            if places.keep(args.data, entry):
+                print(f"maps: the places in {entry['path']} changed, so its data is fetched again", file=sys.stderr)
             sources.area(args.data, entry["name"], entry["path"])
         return 0
+
+    if args.areas is None:
+        planned = args.data / places.PLAN
+        args.areas = planned if planned.is_file() else ROOT / "areas.json"
 
     with tempfile.TemporaryDirectory() as tmp:
         index = publish.build(args.data, args.out, args.areas, args.node_modules, Path(tmp), args.centres,

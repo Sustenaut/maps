@@ -1,12 +1,15 @@
 {
-  "comment": "The area packs maps.sustenaut.eu serves: one per municipality, by its EHAK name, at a path that sites use to find it. The overview covers all of Estonia. Add an area here and the next build fetches and publishes it.",
+  "comment": "The area packs maps.sustenaut.eu serves: one per municipality, at a path that sites use to find it, its county and its name (Rõuge vald, in Võru maakond: vorumaa/rouge). Each municipality one of the sites' places (places) is in gets one, made again when the places in it change; areas lists the ones built whether or not a place is in them. The overview covers all of Estonia.",
+  "places": [
+    "https://temp.schryer.eu/map-places.json"
+  ],
   "areas": [
-    { "name": "Rõuge vald", "path": "louna-eesti/rouge" },
-    { "name": "Võru vald", "path": "louna-eesti/voru-vald" },
-    { "name": "Võru linn", "path": "louna-eesti/voru" },
-    { "name": "Antsla vald", "path": "louna-eesti/antsla" },
-    { "name": "Kanepi vald", "path": "louna-eesti/kanepi" },
-    { "name": "Põlva vald", "path": "louna-eesti/polva" },
-    { "name": "Valga vald", "path": "louna-eesti/valga" }
+    { "name": "Rõuge vald" },
+    { "name": "Võru vald" },
+    { "name": "Võru linn" },
+    { "name": "Antsla vald" },
+    { "name": "Kanepi vald" },
+    { "name": "Põlva vald" },
+    { "name": "Valga vald" }
   ]
 }
