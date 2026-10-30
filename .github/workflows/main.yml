@@ -10,11 +10,11 @@ permissions:
 
 jobs:
   # Whether the merge queue already passed this commit: then the jobs
-  # that only test it are skipped, and nothing here tests less than the
-  # queue did.
+  # it ran are skipped, and nothing here tests less than the queue did.
   tested:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-tested.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+    uses: Sustenaut/pubkit/.github/workflows/job-tested.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    with: {"workflow": ".github/workflows/pr.yml"}
     permissions:
       actions: read
       contents: read
@@ -23,14 +23,14 @@ jobs:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
     with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
 
   # The one check a ruleset requires: it passes only when every job

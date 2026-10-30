@@ -47,7 +47,7 @@ jobs:
       - run: make venv node
       - name: Restore the kept data and packs (pubkit.json's cache entries)
         if: ${{ !inputs.refresh }}
-        uses: Sustenaut/pubkit/actions/cache@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+        uses: Sustenaut/pubkit/actions/cache@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
         with:
           step: restore
       - name: Download the data
@@ -55,10 +55,10 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+        uses: Sustenaut/pubkit/actions/cache@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
         with:
           step: save
-      - uses: Sustenaut/pubkit/actions/deploy-static@e5f7a3611ef00c2dd3d154ffce3ea22ad1b34527 # v0.19.0
+      - uses: Sustenaut/pubkit/actions/deploy-static@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
         with:
           dir: _site
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}
