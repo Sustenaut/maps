@@ -28,14 +28,14 @@ Feature: Downloading the data
     Then it fails
     And stderr mentions "Gamma vald"
 
-  Scenario: Each municipality a place is in gets an area, at its region's path
+  Scenario: Each municipality a place is in gets an area, at its county and name
     Given a site has the place "torn" at 57.72, 26.95
     And a site has the place "jarv" at 57.73, 26.96
     When I download the areas the places are in
     Then it succeeds
-    And the planned areas are "louna/beeta"
-    And the area "louna/beeta" has the places "jarv, torn"
-    And the data has every layer of the area "louna/beeta" and of the overview
+    And the planned areas are "naidismaa/beeta"
+    And the area "naidismaa/beeta" has the places "jarv, torn"
+    And the data has every layer of the area "naidismaa/beeta" and of the overview
 
   Scenario: An area's layers are fetched again only when its places change
     Given a site has the place "torn" at 57.72, 26.95
@@ -45,7 +45,7 @@ Feature: Downloading the data
     When a site adds the place "jarv" at 57.73, 26.96
     And I download the areas the places are in
     Then it succeeds
-    And the download fetched the layers of "louna/beeta" again
+    And the download fetched the layers of "naidismaa/beeta" again
 
   Scenario: A place in no municipality gets no area, and is named
     Given a site has the place "laht" at 59.0, 24.0

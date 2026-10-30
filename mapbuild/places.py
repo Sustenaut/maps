@@ -6,10 +6,12 @@ areas.json:
     "places":  where sites list their places ({"version": 1, "places":
                [{"id", "lat", "lng"}]}, as visit.ee's /map-places.json),
                an https address or a file
-    "regions": the path's first part for each county ("Võru maakond":
-               "louna-eesti"), for a municipality the list does not name
-    "areas":   areas built whether or not a place is in them, by EHAK name
-               and path; a path here wins over the one made up
+    "areas":   areas built whether or not a place is in them, by EHAK
+               name (and a path of their own, which wins over the one
+               made up)
+
+An area's path is its county and its name: Rõuge vald, in Võru maakond,
+is vorumaa/rouge.
 
 `maps download` writes the result to data/areas.json, each area with the
 places in it, and `maps build` builds what it says. An area's places are
@@ -60,6 +62,12 @@ def slug(name: str, names: set[str]) -> str:
     return "-".join(folded.split())
 
 
+def county(name: str) -> str:
+    """A county's part of the path: Võru maakond is vorumaa, Ida-Viru
+    maakond ida-virumaa."""
+    return slug(name.removesuffix(" maakond") + "maa", set())
+
+
 def plan(data: Path, areas_file: Path) -> list[dict]:
     """The areas to build, each with the ids of the places in it, sorted by
     path. Places outside every municipality are named and left out."""
@@ -82,20 +90,20 @@ def plan(data: Path, areas_file: Path) -> list[dict]:
     if outside:
         print(f"maps: in no municipality, so no area: {', '.join(sorted(outside))}", file=sys.stderr)
 
-    paths = {a["name"]: a["path"] for a in config.get("areas", [])}
-    unknown = sorted(n for n in paths if n not in boundaries)
+    listed = {a["name"]: a.get("path") for a in config.get("areas", [])}
+    unknown = sorted(n for n in listed if n not in boundaries)
     if unknown:
         raise SystemExit(f"maps: not municipalities in {data / 'boundaries.geojsonl'}: {', '.join(unknown)}")
-    regions = config.get("regions", {})
     every = set(names)
     out = []
-    for name in sorted(set(paths) | set(found)):
-        if name not in paths:
-            county = boundaries[name]["properties"].get("maakond")
-            if county not in regions:
-                raise SystemExit(f"maps: areas.json has no region for {county!r}, where {name} is")
-            paths[name] = f"{regions[county]}/{slug(name, every)}"
-        out.append({"name": name, "path": paths[name], "places": sorted(found.get(name, ()))})
+    for name in sorted(set(listed) | set(found)):
+        path = listed.get(name)
+        if not path:
+            home = boundaries[name]["properties"].get("maakond")
+            if not home:
+                raise SystemExit(f"maps: {name} has no county in {data / 'boundaries.geojsonl'}")
+            path = f"{county(home)}/{slug(name, every)}"
+        out.append({"name": name, "path": path, "places": sorted(found.get(name, ()))})
     return sorted(out, key=lambda a: a["path"])
 
 

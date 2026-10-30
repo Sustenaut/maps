@@ -54,14 +54,14 @@ read them.
 Which areas get a pack: every municipality a site's place is in, and the
 ones `areas.json` lists. `areas.json`'s `places` are the sites' lists of
 places (visit.ee's `/map-places.json`: `{"version": 1, "places": [{"id",
-"lat", "lng"}]}`), and `regions` gives the first part of a new area's path
-by its county, so a place in Kanepi vald makes `louna-eesti/kanepi`. A
+"lat", "lng"}]}`). An area's path is its county and its name, so a place
+in Kanepi vald, Põlva maakond, makes `polvamaa/kanepi`. A
 place in no municipality is named and gets none. `maps download` writes
 the areas, with the places in each, to `data/areas.json`, and keeps each
 area's places beside its data: when they change, that area's data is
 fetched again and its pack made again. Otherwise a pack stays as it is,
-however old its data. To build an area with no place in it, or at a path
-of its own, list its EHAK name and path in `areas`. When a municipality
+however old its data. To build an area with no place in it, list its EHAK
+name in `areas` (with a `path` of its own, if it needs one). When a municipality
 moves its seat or two merge, change `centres.json`; the build names any
 seat it cannot find.
 

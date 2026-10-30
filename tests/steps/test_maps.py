@@ -405,7 +405,7 @@ def download(run, binary, tmp_path: Path, env: dict, name: str | None = None, pa
     """Download the area named, or, with none, the areas the sites' places
     are in (sites.json, which the steps below fill)."""
     areas = tmp_path / "areas.json"
-    config = {"places": ["sites.json"], "regions": {"Näidis maakond": "louna"}, "areas": []}
+    config = {"places": ["sites.json"], "areas": []}
     if name:
         config["areas"].append({"name": name, "path": path})
     if not (tmp_path / "sites.json").exists():
