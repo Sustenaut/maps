@@ -13,7 +13,7 @@ jobs:
   # it ran are skipped, and nothing here tests less than the queue did.
   tested:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-tested.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-tested.yml@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
     with: {"workflow": ".github/workflows/pr.yml"}
     permissions:
       actions: read
@@ -23,14 +23,14 @@ jobs:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-service-checks.yml@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-service-tests.yml@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
     with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
 
   # The one check a ruleset requires: it passes only when every job

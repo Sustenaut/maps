@@ -13,8 +13,10 @@
 # of its inputs (bin/maps build --cache, through pubkit cache run). An
 # area's data is fetched again only when the places in it change, so only
 # then does its pack go through tippecanoe again; a new area's data is
-# fetched the first time a place is in it. Run by hand with "refresh" to
-# restore nothing, so all the data is fetched and every pack made anew.
+# fetched the first time a place is in it. A pull request labelled
+# "refresh cache" restores nothing once it merges, so all the data is
+# fetched and every pack made anew (pubkit's actions/pr-label); so does a
+# run by hand with "refresh".
 name: deploy
 
 on:
@@ -30,6 +32,8 @@ on:
 
 permissions:
   contents: read
+  # actions/pr-label reads the labels of the pull request a push merged.
+  pull-requests: read
 
 concurrency:
   group: deploy
@@ -45,20 +49,23 @@ jobs:
       - name: Install tippecanoe
         run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
       - run: make venv node
+      - name: Is the merged pull request labelled "refresh cache"?
+        id: label
+        uses: Sustenaut/pubkit/actions/pr-label@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
       - name: Restore the kept data and packs (pubkit.json's cache entries)
-        if: ${{ !inputs.refresh }}
-        uses: Sustenaut/pubkit/actions/cache@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+        uses: Sustenaut/pubkit/actions/cache@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
         with:
           step: restore
+          refresh: ${{ inputs.refresh || steps.label.outputs.present }}
       - name: Download the data
         run: bin/maps download
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+        uses: Sustenaut/pubkit/actions/cache@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
         with:
           step: save
-      - uses: Sustenaut/pubkit/actions/deploy-static@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+      - uses: Sustenaut/pubkit/actions/deploy-static@d851022829479923ae19cbc2a4eb1409a748479b # v0.21.1
         with:
           dir: _site
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}
