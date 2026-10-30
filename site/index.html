@@ -6,27 +6,84 @@
 <title>maps.sustenaut.eu</title>
 <meta name="description" content="Maps of Estonia from open state data, for any sustenaut.eu site.">
 <meta name="robots" content="noindex">
+<script>
+  // Before the page draws, so a dark choice never flashes light: the saved
+  // choice (light or dark), or none, which follows the system.
+  try {
+    const saved = localStorage.getItem("maps-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch {}
+</script>
 <style>
-  :root { --ink: #2E2418; --muted: #6B5D4B; --line: #DDD3BD; --bg: #FAF7EE; --accent: #3F7A3A; }
+  /* The tokens of the Sustenaut UI system (schryer/business-plan ui/src/theme.css,
+     from brand/palette.json), as plain custom properties: this page has no build
+     step. Dark mode uses the same names, as the UI system does. */
+  :root {
+    color-scheme: light;
+    --color-ground: #f3efe2; --color-surface: #fffdf6; --color-sunken: #ede6d4;
+    --color-ink: #17110c; --color-muted: #5d4d3f; --color-rule: #ddd4bf; --color-rule-strong: #c9bea6;
+    --color-link: #1f6b35; --color-primary: #1f6b35; --color-on-primary: #fffdf6;
+    --color-accent-soft: #ddf0d2; --color-bad: #9b2c1f;
+    --font-sans: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Nunito", "Nunito Sans", system-ui, sans-serif;
+    --radius-control: 10px; --radius-panel: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --color-ground: #17110c; --color-surface: #221911; --color-sunken: #2b2017;
+      --color-ink: #f3efe2; --color-muted: #b9ab95; --color-rule: #3a2a1e; --color-rule-strong: #54402f;
+      --color-link: #a6de58; --color-primary: #5bc236; --color-on-primary: #17110c;
+      --color-accent-soft: #24361a; --color-bad: #f08a7a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-ground: #17110c; --color-surface: #221911; --color-sunken: #2b2017;
+    --color-ink: #f3efe2; --color-muted: #b9ab95; --color-rule: #3a2a1e; --color-rule-strong: #54402f;
+    --color-link: #a6de58; --color-primary: #5bc236; --color-on-primary: #17110c;
+    --color-accent-soft: #24361a; --color-bad: #f08a7a;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+  body { margin: 0; background: var(--color-ground); color: var(--color-ink); font: 16px/1.5 var(--font-sans); }
   main { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
-  p { margin: .5rem 0; color: var(--muted); }
-  #map { height: min(70vh, 34rem); border: 1px solid var(--line); border-radius: 8px; margin: 1rem 0; }
-  pre { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .75rem; overflow-x: auto; font-size: .85rem; }
+  header { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: flex-start; justify-content: space-between; }
+  h1, h2 { font-family: var(--font-display); font-weight: 800; }
+  h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.2rem; margin: 2rem 0 .5rem; }
+  p { margin: .5rem 0; color: var(--color-muted); }
+  a { color: var(--color-link); }
+  /* Button, quiet variant, from the UI system: a 44 px touch target. */
+  .theme { min-height: 44px; display: inline-flex; align-items: center; gap: .5rem; padding: 0 1rem;
+           font: 600 .95rem var(--font-sans); color: var(--color-ink); background: var(--color-surface);
+           border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); cursor: pointer; }
+  .theme:hover { background: var(--color-sunken); }
+  .theme:focus-visible, td button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  /* Panel, from the UI system. */
+  .panel { background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: var(--radius-panel); padding: 1rem 1.25rem; }
+  #map { height: min(70vh, 34rem); border: 1px solid var(--color-rule); border-radius: var(--radius-panel); margin: 1rem 0; overflow: hidden; }
+  pre { margin: 0; background: var(--color-sunken); border-radius: var(--radius-control); padding: .75rem; overflow-x: auto; font-size: .85rem; }
+  .table { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
-  td button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
-  .error { color: #9B2C2C; }
+  th { color: var(--color-muted); font-weight: 600; }
+  th, td { text-align: left; padding: .5rem; border-bottom: 1px solid var(--color-rule); }
+  tr:last-child td { border-bottom: 0; }
+  td button { font: inherit; font-weight: 600; color: var(--color-link); background: none; border: 0; padding: 0; min-height: 44px; cursor: pointer; text-decoration: underline; }
+  .error { color: var(--color-bad); }
 </style>
 </head>
 <body>
 <main>
-  <h1>maps.sustenaut.eu</h1>
-  <p>Maps of Estonia from open state data (Maa- ja Ruumiamet's ETAK, EHAK and the Building Register, and RMK's trails), built weekly, for any sustenaut.eu site.</p>
+  <header>
+    <div>
+      <h1>maps.sustenaut.eu</h1>
+      <p>Maps of Estonia from open state data (Maa- ja Ruumiamet's ETAK, EHAK and the Building Register, and RMK's trails), built weekly, for any sustenaut.eu site.</p>
+    </div>
+    <button type="button" class="theme" id="theme" aria-live="polite">Theme: auto</button>
+  </header>
   <div id="map"></div>
   <h2>Use it</h2>
+  <div class="panel">
 <pre>&lt;div id="map" style="height: 400px"&gt;&lt;/div&gt;
 &lt;script type="module"&gt;
   import { createMap } from "https://maps.sustenaut.eu/lib/v1/map.js";
@@ -35,12 +92,33 @@
   });
   new maplibre.Marker().setLngLat([26.929, 57.729]).addTo(map);
 &lt;/script&gt;</pre>
+  </div>
   <h2>Areas</h2>
+  <div class="panel table">
   <table>
     <thead><tr><th>Area</th><th>Path</th><th>Neighbours</th></tr></thead>
     <tbody id="areas"></tbody>
   </table>
+  </div>
 </main>
+<script>
+  // The theme button cycles auto (the system's choice), light and dark, and
+  // remembers the choice in this browser. The map keeps its own colours.
+  (() => {
+    const button = document.getElementById("theme");
+    const order = ["auto", "light", "dark"];
+    const current = () => document.documentElement.dataset.theme || "auto";
+    const show = () => { button.textContent = `Theme: ${current()}`; };
+    button.addEventListener("click", () => {
+      const next = order[(order.indexOf(current()) + 1) % order.length];
+      if (next === "auto") delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = next;
+      try { next === "auto" ? localStorage.removeItem("maps-theme") : localStorage.setItem("maps-theme", next); } catch {}
+      show();
+    });
+    show();
+  })();
+</script>
 <script type="module">
   import { createMap, loadIndex } from "./lib/v1/map.js";
   const rows = document.getElementById("areas");
