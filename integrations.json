@@ -1,0 +1,31 @@
+{
+  "uses": [
+    {
+      "plugin": "bitwarden.secrets",
+      "paths": [
+        "with-secrets",
+        "with-secrets.json"
+      ]
+    },
+    {
+      "plugin": "cloudflare.pages",
+      "paths": [
+        ".github/workflows/deploy.yml"
+      ]
+    }
+  ],
+  "other_hosts": [
+    {
+      "host": "gsavalik.envir.ee",
+      "reason": "The Estonian Land Board open-data WFS, read when maps are built; no account or key"
+    },
+    {
+      "host": "maaruum.ee",
+      "reason": "A credit link on the map"
+    },
+    {
+      "host": "www.rmk.ee",
+      "reason": "A credit link on the map"
+    }
+  ]
+}
