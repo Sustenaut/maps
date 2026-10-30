@@ -1,5 +1,25 @@
 {
-  "comment": "The area packs maps.sustenaut.eu serves: one per municipality, by its EHAK name, at a path that sites use to find it. The overview covers all of Estonia. Add an area here and the next build fetches and publishes it.",
+  "comment": "The area packs maps.sustenaut.eu serves: one per municipality, at a path that sites use to find it. Each municipality one of the sites' places (places) is in gets one, at regions[its county]/its name (Rõuge vald: louna-eesti/rouge), and is made again when the places in it change. areas lists the ones built whether or not a place is in them, or at a path of their own. The overview covers all of Estonia.",
+  "places": [
+    "https://temp.schryer.eu/map-places.json"
+  ],
+  "regions": {
+    "Harju maakond": "pohja-eesti",
+    "Ida-Viru maakond": "kirde-eesti",
+    "Lääne-Viru maakond": "kirde-eesti",
+    "Järva maakond": "kesk-eesti",
+    "Jõgeva maakond": "kesk-eesti",
+    "Rapla maakond": "kesk-eesti",
+    "Tartu maakond": "louna-eesti",
+    "Põlva maakond": "louna-eesti",
+    "Võru maakond": "louna-eesti",
+    "Valga maakond": "louna-eesti",
+    "Viljandi maakond": "louna-eesti",
+    "Pärnu maakond": "laane-eesti",
+    "Lääne maakond": "laane-eesti",
+    "Hiiu maakond": "laane-eesti",
+    "Saare maakond": "laane-eesti"
+  },
   "areas": [
     { "name": "Rõuge vald", "path": "louna-eesti/rouge" },
     { "name": "Võru vald", "path": "louna-eesti/voru-vald" },

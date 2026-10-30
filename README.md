@@ -51,9 +51,19 @@ by the pack's content, so pieces are cached for good and a changed pack
 gets new names; `index.json` is cached for five minutes. Any origin may
 read them.
 
-To add an area, add its EHAK name and path to `areas.json`. When a
-municipality moves its seat or two merge, change `centres.json`; the build
-names any seat it cannot find.
+Which areas get a pack: every municipality a site's place is in, and the
+ones `areas.json` lists. `areas.json`'s `places` are the sites' lists of
+places (visit.ee's `/map-places.json`: `{"version": 1, "places": [{"id",
+"lat", "lng"}]}`), and `regions` gives the first part of a new area's path
+by its county, so a place in Kanepi vald makes `louna-eesti/kanepi`. A
+place in no municipality is named and gets none. `maps download` writes
+the areas, with the places in each, to `data/areas.json`, and keeps each
+area's places beside its data: when they change, that area's data is
+fetched again and its pack made again. Otherwise a pack stays as it is,
+however old its data. To build an area with no place in it, or at a path
+of its own, list its EHAK name and path in `areas`. When a municipality
+moves its seat or two merge, change `centres.json`; the build names any
+seat it cannot find.
 
 ## Building
 
@@ -67,14 +77,16 @@ make functional     # the Gherkin suite, on small made-up data
 ```
 
 `.github/workflows/deploy.yml` downloads, builds and publishes on every
-push to main and every Monday. It keeps the downloaded data for the ISO
-week, so only the first run of a week fetches it (run it by hand with
-`fresh` to fetch it anyway), and keeps the built packs: `bin/maps build
---cache` makes each pack through pubkit's `pubkit cache run`, by the
-entries of pubkit.json's `cache` block (`data`, `packs`, `overview`), so a pack whose inputs (its data, the
-boundaries, mapbuild's code and tippecanoe's version) have not changed is
-copied, and a deploy that changes only `lib/` or `site/` builds nothing
-again. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
+push to main and every morning, which picks up the places sites added. It
+keeps the downloaded data from run to run, fetching only what is missing
+(a new area, or one whose places changed), and keeps the built packs:
+`bin/maps build --cache` makes each pack through pubkit's `pubkit cache
+run`, by the entries of pubkit.json's `cache` block (`data`, `packs`,
+`overview`), so a pack whose inputs (its data and places, the boundaries,
+mapbuild's code and tippecanoe's version) have not changed is copied, and
+a deploy that changes only `lib/` or `site/` builds nothing again. Run it
+by hand with `refresh` to restore nothing, so all the data is fetched and
+every pack made anew. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
 `MAPS_DEPLOY` is `on`, with the Actions secret `CLOUDFLARE_GITHUB_API_TOKEN`
 and variable `CLOUDFLARE_ACCOUNT_ID`. The Pages project `sustenaut-maps`
 and the DNS name come from schryer/business-plan's infrastructure.

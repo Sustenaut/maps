@@ -42,8 +42,8 @@ def feature(geometry, **properties):
 
 
 def municipalities():
-    return [feature(rect(*ALFA), omavalitsus="Alfa vald", ehak_kood="0001"),
-            feature(rect(*BEETA), omavalitsus="Beeta vald", ehak_kood="0002")]
+    return [feature(rect(*ALFA), omavalitsus="Alfa vald", ehak_kood="0001", maakond="Näidis maakond"),
+            feature(rect(*BEETA), omavalitsus="Beeta vald", ehak_kood="0002", maakond="Näidis maakond")]
 
 
 def area_layers(w, s, e, n, name):
@@ -401,10 +401,63 @@ def page_size(env: dict, count: int) -> None:
     env["MAPS_WFS_PAGE"] = str(count)
 
 
-def download(run, binary, tmp_path: Path, env: dict, name: str, path: str):
+def download(run, binary, tmp_path: Path, env: dict, name: str | None = None, path: str | None = None):
+    """Download the area named, or, with none, the areas the sites' places
+    are in (sites.json, which the steps below fill)."""
     areas = tmp_path / "areas.json"
-    areas.write_text(json.dumps({"areas": [{"name": name, "path": path}]}))
+    config = {"places": ["sites.json"], "regions": {"Näidis maakond": "louna"}, "areas": []}
+    if name:
+        config["areas"].append({"name": name, "path": path})
+    if not (tmp_path / "sites.json").exists():
+        write_places(tmp_path, [])
+    areas.write_text(json.dumps(config))
     return run(binary("maps"), "download", "--data", tmp_path / "data", "--areas", areas, env=env)
+
+
+def write_places(tmp_path: Path, places: list[dict]) -> None:
+    (tmp_path / "sites.json").write_text(json.dumps({"version": 1, "places": places}))
+
+
+@given(parsers.parse('a site has the place "{place_id}" at {lat:g}, {lng:g}'))
+@when(parsers.parse('a site adds the place "{place_id}" at {lat:g}, {lng:g}'))
+def site_place(tmp_path: Path, place_id: str, lat: float, lng: float) -> None:
+    listed = json.loads((tmp_path / "sites.json").read_text())["places"] if (tmp_path / "sites.json").exists() else []
+    write_places(tmp_path, listed + [{"id": place_id, "lat": lat, "lng": lng}])
+
+
+@when("I download the areas the places are in", target_fixture="result")
+def download_places(run, binary, tmp_path: Path, env: dict, wfs: WFS):
+    wfs.before_second = len(wfs.requests)
+    return download(run, binary, tmp_path, env)
+
+
+@then(parsers.parse('the planned areas are "{paths}"'))
+def planned(tmp_path: Path, paths: str) -> None:
+    areas = json.loads((tmp_path / "data" / "areas.json").read_text())["areas"]
+    assert [a["path"] for a in areas] == [p.strip() for p in paths.split(",") if p.strip()], areas
+
+
+@then("no area is planned")
+def none_planned(tmp_path: Path) -> None:
+    assert json.loads((tmp_path / "data" / "areas.json").read_text())["areas"] == []
+
+
+@then(parsers.parse('the area "{path}" has the places "{ids}"'))
+def area_places(tmp_path: Path, path: str, ids: str) -> None:
+    areas = {a["path"]: a for a in json.loads((tmp_path / "data" / "areas.json").read_text())["areas"]}
+    assert areas[path]["places"] == [i.strip() for i in ids.split(",")], areas
+
+
+@then(parsers.parse('the download fetched the layers of "{path}" again'))
+def fetched_again(wfs: WFS, path: str) -> None:
+    box = [q for q in wfs.requests[wfs.before_second:] if "bbox" in q]
+    assert len(box) == len(AREA_LAYERS), box
+
+
+@then("the download fetched no area's layers")
+def fetched_none(wfs: WFS) -> None:
+    box = [q for q in wfs.requests[wfs.before_second:] if "bbox" in q]
+    assert not box, box
 
 
 @when(parsers.parse('I download the area "{name}" at "{path}"'), target_fixture="result")
