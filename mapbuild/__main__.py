@@ -2,7 +2,7 @@
 
     maps download [--data DIR] [--areas FILE] [--centres FILE]
     maps build [--data DIR] [--out DIR] [--areas FILE] [--centres FILE] [--cache]
-    maps build-area NAME PATH --data DIR --pack FILE --meta FILE
+    maps build-area --data DIR --pack FILE --meta FILE [--] NAME PATH
     maps build-overview --data DIR --pack FILE
 
 download reads the municipality boundaries, the national overview's

@@ -132,8 +132,10 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         meta_file = tmp / entry["path"] / "meta.json"
         if cache:
             hits += cached(cache, "packs", entry["path"], [pack, meta_file],
-                           [sys.executable, "-m", "mapbuild", "build-area", entry["name"], entry["path"],
-                            "--data", str(data), "--pack", str(pack), "--meta", str(meta_file)])
+                           [sys.executable, "-m", "mapbuild", "build-area", "--data", str(data),
+                            "--pack", str(pack), "--meta", str(meta_file),
+                            # After --, a name is never read as an option.
+                            "--", entry["name"], entry["path"]])
             meta = json.loads(meta_file.read_text(encoding="utf-8"))
         else:
             meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"] / "layers")
