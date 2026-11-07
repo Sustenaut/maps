@@ -45,5 +45,10 @@
   },
   "site": {
     "check_dir": "site"
+  },
+  "security": {
+    "sonar": {
+      "args": "-Dsonar.sources=. -Dsonar.tests=tests -Dsonar.exclusions=tests/**"
+    }
   }
 }
