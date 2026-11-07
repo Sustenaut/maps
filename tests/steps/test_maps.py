@@ -53,7 +53,17 @@ def area_layers(w, s, e, n, name):
     return {
         "road": [feature(line((w, cy), (e, cy)), tyyp=10, nimetus="Tee 1"),
                  feature(line((cx, s), (cx, n)), tyyp=60),
-                 feature(line((cx, cy + 0.002), (cx + 0.003, cy + 0.004)), tyyp=70)],
+                 feature(line((cx, cy + 0.002), (cx + 0.003, cy + 0.004)), tyyp=70),
+                 # One way along its line, and one way against it.
+                 feature(line((cx - 0.004, s + 0.002), (cx - 0.004, s + 0.004)), tyyp=50, liiklus=20),
+                 feature(line((cx - 0.006, s + 0.002), (cx - 0.006, s + 0.004)), tyyp=50, liiklus=30),
+                 # A ramp, for cars only, in two parts.
+                 feature({"type": "MultiLineString", "coordinates": [
+                     [[cx + 0.004, s + 0.002], [cx + 0.004, s + 0.003]],
+                     [[cx + 0.004, s + 0.003], [cx + 0.005, s + 0.004]]]}, tyyp=40),
+                 # A ring, which leads nowhere, and something that is no road.
+                 feature(line((cx + 0.006, s + 0.002), (cx + 0.007, s + 0.003), (cx + 0.006, s + 0.002)), tyyp=60),
+                 feature(line((cx + 0.008, s + 0.002), (cx + 0.008, s + 0.003)), tyyp=997)],
         "lake": [feature(rect(cx + 0.01, cy + 0.01, cx + 0.02, cy + 0.015), nimetus=f"{name} järv")],
         "river_l": [feature(line((w, s + 0.005), (e, s + 0.01)), tyyp=30, nimetus=f"{name} oja")],
         "wood": [feature(rect(w, s, cx, cy), tyyp=10)],
@@ -265,6 +275,13 @@ def network_roads(site: Path, path: str, count: int) -> None:
 @then(parsers.parse('the road network of "{path}" has a path open only on foot'))
 def network_path(site: Path, path: str) -> None:
     assert [e["modes"] for e in edges(network(site, path))].count(1 | 7 << 3) == 1
+
+
+@then(parsers.parse('the road network of "{path}" has a one-way street each way, a ramp in two parts, and nothing else'))
+def network_rest(site: Path, path: str) -> None:
+    rest = sorted(e["modes"] for e in edges(network(site, path)) if e["modes"] & 7 not in (7, 1))
+    street, ramp = 5 << 3, 4 << 3
+    assert rest == sorted([1 | 2 | street, 1 | 4 | street, 2 | 4 | ramp, 2 | 4 | ramp]), rest
 
 
 @then(parsers.parse('the road network of "{path}" knows a main road from any other'))

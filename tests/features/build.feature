@@ -35,6 +35,7 @@ Feature: Building the site
     And the road network of "louna/alfa" has 2 roads, each as long as its line, open on foot and by car
     And the road network of "louna/alfa" has a path open only on foot
     And the road network of "louna/alfa" knows a main road from any other
+    And the road network of "louna/alfa" has a one-way street each way, a ramp in two parts, and nothing else
 
   Scenario: Every municipality is listed, with the settlement it is run from
     Given "Alfa vald" is run from "Alfa küla"

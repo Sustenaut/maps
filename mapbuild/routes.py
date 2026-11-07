@@ -54,7 +54,7 @@ def modes(props: dict) -> int:
     if kind in CAR_TYPES:
         way = props.get("liiklus")
         bits |= {ALONG: CAR_AB, AGAINST: CAR_BA}.get(way, CAR_AB | CAR_BA)
-    if bits and isinstance(kind, int):
+    if bits:
         bits |= (kind // 10) << 3
     return bits
 
