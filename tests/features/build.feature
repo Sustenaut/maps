@@ -28,6 +28,15 @@ Feature: Building the site
     And the pack of "louna/alfa" spans zoom 8 to 15
     And the overview has the layers "road, water, boundary, place_label, area_label"
 
+  Scenario: Each area gets its road network, for walking and driving distances
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it succeeds
+    And the road network of "louna/alfa" is in "routes/louna/alfa/<hash>.json", named by its content
+    And the road network of "louna/alfa" has 2 roads, each as long as its line, open on foot and by car
+    And the road network of "louna/alfa" has a path open only on foot
+    And the road network of "louna/alfa" knows a main road from any other
+    And the road network of "louna/alfa" has a one-way street each way, a ramp in two parts, and nothing else
+
   Scenario: Every municipality is listed, with the settlement it is run from
     Given "Alfa vald" is run from "Alfa küla"
     And "Beeta vald" is run from "Gamma küla"
@@ -48,7 +57,7 @@ Feature: Building the site
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
     Then it succeeds
     And _headers lets any site read the maps
-    And _headers caches packs for good and index.json for 5 minutes
+    And _headers caches packs and road networks for good and index.json for 5 minutes
 
   Scenario: The map package and its library ship with the site
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
