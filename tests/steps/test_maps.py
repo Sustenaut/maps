@@ -6,6 +6,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import math
 import re
 import struct
 import threading
@@ -51,7 +52,8 @@ def area_layers(w, s, e, n, name):
     cx, cy = (w + e) / 2, (s + n) / 2
     return {
         "road": [feature(line((w, cy), (e, cy)), tyyp=10, nimetus="Tee 1"),
-                 feature(line((cx, s), (cx, n)), tyyp=60)],
+                 feature(line((cx, s), (cx, n)), tyyp=60),
+                 feature(line((cx, cy + 0.002), (cx + 0.003, cy + 0.004)), tyyp=70)],
         "lake": [feature(rect(cx + 0.01, cy + 0.01, cx + 0.02, cy + 0.015), nimetus=f"{name} järv")],
         "river_l": [feature(line((w, s + 0.005), (e, s + 0.01)), tyyp=30, nimetus=f"{name} oja")],
         "wood": [feature(rect(w, s, cx, cy), tyyp=10)],
@@ -224,6 +226,47 @@ def pack_in(site: Path, path: str, pattern: str) -> None:
     assert matches(pattern, area(site, path)["pack"]["dir"]), area(site, path)["pack"]
 
 
+def network(site: Path, path: str) -> dict:
+    return json.loads((site / area(site, path)["routes"]["file"]).read_text(encoding="utf-8"))
+
+
+def edges(net: dict) -> list[dict]:
+    """Each edge of a road network, with its ends' coordinates in degrees."""
+    nodes, flat = net["nodes"], net["edges"]
+    end = lambda i: (nodes[2 * i] / 1e6, nodes[2 * i + 1] / 1e6)
+    return [{"a": end(flat[i]), "b": end(flat[i + 1]), "metres": flat[i + 2], "modes": flat[i + 3]}
+            for i in range(0, len(flat), 4)]
+
+
+def haversine(a, b) -> float:
+    p1, p2 = math.radians(a[1]), math.radians(b[1])
+    h = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(b[0] - a[0]) / 2) ** 2
+    return 2 * 6371008.8 * math.asin(math.sqrt(h))
+
+
+@then(parsers.parse('the road network of "{path}" is in "{pattern}", named by its content'))
+def network_in(site: Path, path: str, pattern: str) -> None:
+    listed = area(site, path)["routes"]
+    assert matches(pattern, listed["file"]), listed
+    data = (site / listed["file"]).read_bytes()
+    assert listed["size"] == len(data)
+    assert hashlib.sha256(data).hexdigest()[:12] in listed["file"]
+    assert network(site, path)["version"] == 1
+
+
+@then(parsers.parse('the road network of "{path}" has {count:d} roads, each as long as its line, open on foot and by car'))
+def network_roads(site: Path, path: str, count: int) -> None:
+    roads = [e for e in edges(network(site, path)) if e["modes"] == 7]
+    assert len(roads) == count, roads
+    for road in roads:
+        assert abs(road["metres"] - haversine(road["a"], road["b"])) <= 1, road
+
+
+@then(parsers.parse('the road network of "{path}" has a path open only on foot'))
+def network_path(site: Path, path: str) -> None:
+    assert [e["modes"] for e in edges(network(site, path))].count(1) == 1
+
+
 @then(parsers.parse('the overview is in "{pattern}"'))
 def overview_in(site: Path, pattern: str) -> None:
     assert matches(pattern, index(site)["overview"]["dir"]), index(site)["overview"]
@@ -339,10 +382,11 @@ def cors(site: Path) -> None:
     assert "Access-Control-Allow-Origin: *" in headers(site)["/*"]
 
 
-@then("_headers caches packs for good and index.json for 5 minutes")
+@then("_headers caches packs and road networks for good and index.json for 5 minutes")
 def caching(site: Path) -> None:
     h = headers(site)
     assert "Cache-Control: public, max-age=31536000, immutable" in h["/packs/*"]
+    assert "Cache-Control: public, max-age=31536000, immutable" in h["/routes/*"]
     assert "Cache-Control: public, max-age=300" in h["/index.json"]
 
 

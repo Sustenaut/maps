@@ -41,6 +41,7 @@ to `/lib/v2/`. `lib/v1/map.js` documents every export.
 | `municipalities.json` | every municipality: where to write its name, its extent, and the settlement it is run from (`centres.json`), for `addMunicipalities()` |
 | `packs/eesti/<hash>/<n>.bin` | all of Estonia, zoom 5 to 10 |
 | `packs/<path>/<hash>/<n>.bin` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
+| `routes/<path>/<hash>.json` | one municipality's road network (ETAK roads and paths), for working out walking and driving distances; see `mapbuild/routes.py` |
 | `lib/v1/` | the map package, its fonts and the map library |
 
 Each pack is a PMTiles archive cut into numbered 128 KiB pieces. A PMTiles

@@ -7,6 +7,7 @@ the index, and the map package.
                                       label it, its box and its centre
     out/packs/eesti/<hash>/<n>.bin    the overview, in pieces
     out/packs/<path>/<hash>/<n>.bin   one pack per area, in pieces
+    out/routes/<path>/<hash>.json     each area's road network, for distances
     out/lib/v1/...                    the map package (lib/v1 in the repository)
     out/_headers                      CORS and caching for Cloudflare Pages
 
@@ -27,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import area, municipalities as municipality_list, overview
+from . import area, municipalities as municipality_list, overview, routes
 from .places import checked
 from .sources import municipalities
 
@@ -58,6 +59,8 @@ HEADERS = """\
 /municipalities.json
   Cache-Control: public, max-age=3600
 /packs/*
+  Cache-Control: public, max-age=31536000, immutable
+/routes/*
   Cache-Control: public, max-age=31536000, immutable
 /lib/*
   Cache-Control: public, max-age=3600
@@ -140,7 +143,11 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         else:
             meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"] / "layers")
         made += 1
-        index["areas"].append({"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])})
+        listed = {"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])}
+        roads = data / "areas" / entry["path"] / "road.geojsonl"
+        if roads.is_file():
+            listed["routes"] = routes.write(roads, out, entry["path"])
+        index["areas"].append(listed)
     if cache:
         subprocess.run([pubkit(), "cache", "prune"], cwd=cache, check=True, stdout=subprocess.DEVNULL)
 
