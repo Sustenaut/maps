@@ -25,9 +25,13 @@ $(VENV)/.done: tests/requirements.lock
 	touch $@
 
 # The Gherkin suite, run against bin/maps, with its coverage in
-# coverage/coverage.xml for SonarQube Cloud (.coveragerc).
+# coverage/coverage.xml for SonarQube Cloud (.coveragerc), and the map
+# package's own tests (tests/js), with theirs in coverage/lcov.info.
 functional: venv node
 	rm -rf coverage && mkdir coverage
+	node --test --experimental-test-coverage --test-coverage-include='lib/**' \
+	  --test-reporter=spec --test-reporter-destination=stdout \
+	  --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/js/*.test.js
 	cd tests && COVERAGE_RCFILE=$(CURDIR)/.coveragerc COVERAGE_FILE=$(CURDIR)/coverage/.coverage \
 	  MAPS_BIN_DIR=$(CURDIR)/bin ../$(VENV)/bin/coverage run -m pytest -n auto
 	COVERAGE_RCFILE=.coveragerc COVERAGE_FILE=coverage/.coverage $(VENV)/bin/coverage combine -q
