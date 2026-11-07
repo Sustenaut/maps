@@ -33,6 +33,29 @@ draws, so the map stops zooming in there: the zoom-in button turns off and
 a note says why. Pass `detailNote` to `createMap` to translate it. `/lib/v1/` only grows; a change that would break a site goes
 to `/lib/v2/`. `lib/v1/map.js` documents every export.
 
+## Walking and driving ways
+
+`lib/v1/routes.js` works out ways on the road networks the site serves
+(`routes/`, below), for any site that needs distances on Estonia's roads:
+
+```js
+import { loadNetwork, route } from "https://maps.sustenaut.eu/lib/v1/routes.js";
+const home = { lat: 57.729, lng: 26.929 };
+const places = [{ lat: 57.7228, lng: 27.0599 }, { lat: 57.7278, lng: 26.9222 }];
+const net = await loadNetwork([home, ...places]);   // the areas around them
+route(net, home, places, "foot");  // metres of the shortest walk to each, or null
+route(net, home, places, "car");   // metres of the quickest drive to each, or null
+```
+
+A walk may take any road or path; a drive keeps to roads and one-way
+streets, at a speed for each road type. A way starts and ends at a straight
+line to the nearest road (up to 1 km), which counts too. Node can use the
+same module: `npm install github:Sustenaut/maps#<tag>` and `import { route }
+from "sustenaut-maps/routes"`, passing `loadNetwork` a `read(file)` that
+fetches from maps.sustenaut.eu or reads a local `maps build`. visit.ee's
+`make distances` and map editor do. `lib/v1/routes.js` documents every
+export; it only grows, like the map package.
+
 ## What the site serves
 
 | Path | What |
@@ -41,7 +64,7 @@ to `/lib/v2/`. `lib/v1/map.js` documents every export.
 | `municipalities.json` | every municipality: where to write its name, its extent, and the settlement it is run from (`centres.json`), for `addMunicipalities()` |
 | `packs/eesti/<hash>/<n>.bin` | all of Estonia, zoom 5 to 10 |
 | `packs/<path>/<hash>/<n>.bin` | one municipality, zoom 8 to 15, at the path `areas.json` gives it |
-| `routes/<path>/<hash>.json` | one municipality's road network (ETAK roads and paths), for working out walking and driving distances; see `mapbuild/routes.py` |
+| `routes/<path>/<hash>.json` | one municipality's road network (ETAK roads and paths), for `lib/v1/routes.js`; see `mapbuild/routes.py` |
 | `lib/v1/` | the map package, its fonts and the map library |
 
 Each pack is a PMTiles archive cut into numbered 128 KiB pieces. A PMTiles
