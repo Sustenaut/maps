@@ -10,8 +10,12 @@ networks of the areas around it (visit.ee's `make distances`).
      "edges": [a, b, metres, modes, ...]}    a and b index nodes
 
 An edge's modes are bits: FOOT (1), CAR from a to b (2), CAR from b to a
-(4). Neighbouring areas' data overlap by 1 km and hold the same segments
-with the same coordinates, so their networks join where their nodes do.
+(4), and above them (modes >> 3) ETAK's road type over ten (1 a main road,
+2 a secondary one, 3 a local one, 4 a ramp, 5 a street, 6 any other road, 7 a
+path, 8 a cycle and foot path), so a car's way can prefer the faster
+roads. Neighbouring areas' data overlap by 1 km and hold the same
+segments with the same coordinates, so their networks join where their
+nodes do.
 """
 
 from __future__ import annotations
@@ -50,6 +54,8 @@ def modes(props: dict) -> int:
     if kind in CAR_TYPES:
         way = props.get("liiklus")
         bits |= {ALONG: CAR_AB, AGAINST: CAR_BA}.get(way, CAR_AB | CAR_BA)
+    if bits and isinstance(kind, int):
+        bits |= (kind // 10) << 3
     return bits
 
 

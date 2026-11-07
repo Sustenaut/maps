@@ -256,7 +256,7 @@ def network_in(site: Path, path: str, pattern: str) -> None:
 
 @then(parsers.parse('the road network of "{path}" has {count:d} roads, each as long as its line, open on foot and by car'))
 def network_roads(site: Path, path: str, count: int) -> None:
-    roads = [e for e in edges(network(site, path)) if e["modes"] == 7]
+    roads = [e for e in edges(network(site, path)) if e["modes"] & 7 == 7]
     assert len(roads) == count, roads
     for road in roads:
         assert abs(road["metres"] - haversine(road["a"], road["b"])) <= 1, road
@@ -264,7 +264,13 @@ def network_roads(site: Path, path: str, count: int) -> None:
 
 @then(parsers.parse('the road network of "{path}" has a path open only on foot'))
 def network_path(site: Path, path: str) -> None:
-    assert [e["modes"] for e in edges(network(site, path))].count(1) == 1
+    assert [e["modes"] for e in edges(network(site, path))].count(1 | 7 << 3) == 1
+
+
+@then(parsers.parse('the road network of "{path}" knows a main road from any other'))
+def network_kinds(site: Path, path: str) -> None:
+    kinds = sorted(e["modes"] >> 3 for e in edges(network(site, path)) if e["modes"] & 7 == 7)
+    assert kinds == [1, 6], kinds
 
 
 @then(parsers.parse('the overview is in "{pattern}"'))
