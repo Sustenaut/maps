@@ -51,9 +51,9 @@ jobs:
       - run: make venv node
       - name: Is the merged pull request labelled "refresh cache"?
         id: label
-        uses: Sustenaut/pubkit/actions/pr-label@d634bd9ba97c6933561e9e7d1ceff5b975e8f22e # v0.28.0
+        uses: Sustenaut/pubkit/actions/pr-label@74ab84e90fc8b6f691ef4b3d717a9e838d49e4a8 # v0.34.0
       - name: Restore the kept data and packs (pubkit.json's cache entries)
-        uses: Sustenaut/pubkit/actions/cache@d634bd9ba97c6933561e9e7d1ceff5b975e8f22e # v0.28.0
+        uses: Sustenaut/pubkit/actions/cache@74ab84e90fc8b6f691ef4b3d717a9e838d49e4a8 # v0.34.0
         with:
           step: restore
           refresh: ${{ inputs.refresh || steps.label.outputs.present }}
@@ -62,10 +62,10 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@d634bd9ba97c6933561e9e7d1ceff5b975e8f22e # v0.28.0
+        uses: Sustenaut/pubkit/actions/cache@74ab84e90fc8b6f691ef4b3d717a9e838d49e4a8 # v0.34.0
         with:
           step: save
-      - uses: Sustenaut/pubkit/actions/deploy-static@d634bd9ba97c6933561e9e7d1ceff5b975e8f22e # v0.28.0
+      - uses: Sustenaut/pubkit/actions/deploy-static@74ab84e90fc8b6f691ef4b3d717a9e838d49e4a8 # v0.34.0
         with:
           dir: _site
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_GITHUB_API_TOKEN }}

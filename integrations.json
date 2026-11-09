@@ -36,5 +36,8 @@
       "host": "www.rmk.ee",
       "reason": "A credit link on the map"
     }
+  ],
+  "own_hosts": [
+    "sustenaut.eu"
   ]
 }
