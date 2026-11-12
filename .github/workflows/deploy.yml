@@ -51,9 +51,9 @@ jobs:
       - run: make venv node
       - name: Is the merged pull request labelled "refresh cache"?
         id: label
-        uses: Sustenaut/pubkit/actions/pr-label@3bf6ed20f0ae2fe63ffb08cba96fe59a6cfddcb1 # v0.35.0
+        uses: Sustenaut/pubkit/actions/pr-label@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
       - name: Restore the kept data and packs (pubkit.json's cache entries)
-        uses: Sustenaut/pubkit/actions/cache@3bf6ed20f0ae2fe63ffb08cba96fe59a6cfddcb1 # v0.35.0
+        uses: Sustenaut/pubkit/actions/cache@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
         with:
           step: restore
           refresh: ${{ inputs.refresh || steps.label.outputs.present }}
@@ -62,7 +62,7 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubkit/actions/cache@3bf6ed20f0ae2fe63ffb08cba96fe59a6cfddcb1 # v0.35.0
+        uses: Sustenaut/pubkit/actions/cache@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
         with:
           step: save
       - uses: Sustenaut/pubhost/actions/deploy-static@2196c741d3de6c92c6035c42435c6e517c8ba0ce # v0.1.0
