@@ -40,7 +40,7 @@ Then("a walk takes the shortest way, and a drive the quickest", function () {
   const g = joinNetworks([network([A, B, C, D], [[0, 1, 1100, BOTH, 1], [1, 2, 1100, BOTH, 1], [0, 3, 1000, BOTH, 6], [3, 2, 1000, BOTH, 6]])]);
   assert.deepEqual(route(g, at(A), [at(C)], "foot"), [2000]);
   assert.deepEqual(route(g, at(A), [at(C)], "car"), [2200]);
-})(scenarioContext);
+})();
 });
 
 Then("a car keeps to a one-way road's direction; a walker does not", function () {
@@ -50,7 +50,7 @@ Then("a car keeps to a one-way road's direction; a walker does not", function ()
   assert.deepEqual(route(g, at(A), [at(B)], "foot"), [1100]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [3300]);
   assert.deepEqual(route(g, at(B), [at(A)], "car"), [1100]);
-})(scenarioContext);
+})();
 });
 
 Then("a path takes walkers only", function () {
@@ -58,7 +58,7 @@ Then("a path takes walkers only", function () {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, FOOT, 7]])]);
   assert.deepEqual(route(g, at(A), [at(B)], "foot"), [1100]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [null]);
-})(scenarioContext);
+})();
 });
 
 Then("the way starts and ends off the road, along a straight line to it", function () {
@@ -67,14 +67,14 @@ Then("the way starts and ends off the road, along a straight line to it", functi
   // About 111 m north of A, and of B.
   const [walk] = route(g, { lng: A[0], lat: A[1] + 0.001 }, [{ lng: B[0], lat: B[1] + 0.001 }], "foot");
   assert.ok(Math.abs(walk - (1100 + 2 * 111)) < 2, walk);
-})(scenarioContext);
+})();
 });
 
 Then("a place far from any road has no way to it", function () {
   return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   assert.deepEqual(route(g, at(A), [{ lng: 27.2, lat: 57.9 }], "foot"), [null]);
-})(scenarioContext);
+})();
 });
 
 Then("neighbouring areas' networks join where they share a node, and a shared road counts once", function () {
@@ -85,7 +85,7 @@ Then("neighbouring areas' networks join where they share a node, and a shared ro
   const g = joinNetworks([west, east, both]);
   assert.deepEqual(route(g, at(A), [at(C)], "car"), [2200]);
   assert.equal(g.out.car[0].length, 3);
-})(scenarioContext);
+})();
 });
 
 Then("only the areas around the points are read", function () {
@@ -103,7 +103,7 @@ Then("only the areas around the points are read", function () {
   const g = await loadNetwork([at(A), at(C)], { read: get });
   assert.deepEqual(read, ["index.json", "routes/near.json"]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [1100]);
-})(scenarioContext);
+})();
 });
 
 Then("loadNetwork fetches from the site the module came from by default", function () {
@@ -133,14 +133,14 @@ Then("nearest says where a point joins the network, nearest first", function () 
   assert.equal(joins.length, 1);
   assert.equal(joins[0][0], 0);
   assert.ok(Math.abs(joins[0][1] - crowMetres(at(A), { lng: A[0], lat: A[1] + 0.001 })) < 0.01);
-})(scenarioContext);
+})();
 });
 
 Then("a one-way road's far end still takes a car in", function () {
   return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, FOOT | CAR_AB, 3]])]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [1100]);
-})(scenarioContext);
+})();
 });
 
 Then("an unknown profile is refused, and a network of another version too", function () {
@@ -148,5 +148,5 @@ Then("an unknown profile is refused, and a network of another version too", func
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   assert.throws(() => route(g, at(A), [at(B)], "bike"), /no route profile "bike"/);
   assert.throws(() => joinNetworks([{ version: 2, nodes: [], edges: [] }]), /version 2/);
-})(scenarioContext);
+})();
 });
