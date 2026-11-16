@@ -1,8 +1,19 @@
 // The routes package (lib/v1/routes.js) on small road networks as
 // mapbuild/routes.py writes them, run by `make functional`.
-import { test } from "node:test";
+import { After, Then } from "@cucumber/cucumber";
+import { mock as nodeMock } from "node:test";
 import assert from "node:assert/strict";
 import { areasAround, joinNetworks, loadNetwork, nearest, route, crowMetres, FOOT, CAR_AB, CAR_BA } from "../../lib/v1/routes.js";
+
+// What node:test gave each test as `t`: its mocks, restored when the
+// scenario ends, and the cleanups it registers with t.after().
+const cleanups = [];
+const scenarioContext = { mock: nodeMock, after: (fn) => cleanups.push(fn) };
+After("@routes", async function () {
+  while (cleanups.length) await cleanups.pop()();
+  nodeMock.restoreAll();
+});
+
 
 // A network as mapbuild/routes.py writes it, from points in degrees and
 // edges [a, b, metres, modes, road type].
@@ -22,50 +33,63 @@ const B = [26.918, 57.7];
 const C = [26.918, 57.71];
 const D = [26.9, 57.71];
 
-test("a walk takes the shortest way, and a drive the quickest", () => {
+Then("a walk takes the shortest way, and a drive the quickest", function () {
+  return (() => {
   // A to C: east then north on a main road (2.2 km), or north then east on a
   // forest road (2 km).
   const g = joinNetworks([network([A, B, C, D], [[0, 1, 1100, BOTH, 1], [1, 2, 1100, BOTH, 1], [0, 3, 1000, BOTH, 6], [3, 2, 1000, BOTH, 6]])]);
   assert.deepEqual(route(g, at(A), [at(C)], "foot"), [2000]);
   assert.deepEqual(route(g, at(A), [at(C)], "car"), [2200]);
+})();
 });
 
-test("a car keeps to a one-way road's direction; a walker does not", () => {
+Then("a car keeps to a one-way road's direction; a walker does not", function () {
+  return (() => {
   // A to B one way only (along the line), and the long way round both ways.
   const g = joinNetworks([network([A, B, C, D], [[1, 0, 1100, FOOT | CAR_AB, 3], [0, 3, 1100, BOTH, 3], [3, 2, 1100, BOTH, 3], [2, 1, 1100, BOTH, 3]])]);
   assert.deepEqual(route(g, at(A), [at(B)], "foot"), [1100]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [3300]);
   assert.deepEqual(route(g, at(B), [at(A)], "car"), [1100]);
+})();
 });
 
-test("a path takes walkers only", () => {
+Then("a path takes walkers only", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, FOOT, 7]])]);
   assert.deepEqual(route(g, at(A), [at(B)], "foot"), [1100]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [null]);
+})();
 });
 
-test("the way starts and ends off the road, along a straight line to it", () => {
+Then("the way starts and ends off the road, along a straight line to it", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   // About 111 m north of A, and of B.
   const [walk] = route(g, { lng: A[0], lat: A[1] + 0.001 }, [{ lng: B[0], lat: B[1] + 0.001 }], "foot");
   assert.ok(Math.abs(walk - (1100 + 2 * 111)) < 2, walk);
+})();
 });
 
-test("a place far from any road has no way to it", () => {
+Then("a place far from any road has no way to it", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   assert.deepEqual(route(g, at(A), [{ lng: 27.2, lat: 57.9 }], "foot"), [null]);
+})();
 });
 
-test("neighbouring areas' networks join where they share a node, and a shared road counts once", () => {
+Then("neighbouring areas' networks join where they share a node, and a shared road counts once", function () {
+  return (() => {
   const west = network([A, B], [[0, 1, 1100, BOTH, 3]]);
   const east = network([B, C], [[0, 1, 1100, BOTH, 3]]);
   const both = network([A, B], [[0, 1, 1100, BOTH, 3]]);
   const g = joinNetworks([west, east, both]);
   assert.deepEqual(route(g, at(A), [at(C)], "car"), [2200]);
   assert.equal(g.out.car[0].length, 3);
+})();
 });
 
-test("only the areas around the points are read", async () => {
+Then("only the areas around the points are read", function () {
+  return (async () => {
   const index = {
     areas: [
       { path: "near", bbox: [26.8, 57.6, 27.0, 57.8], routes: { file: "routes/near.json" } },
@@ -79,9 +103,11 @@ test("only the areas around the points are read", async () => {
   const g = await loadNetwork([at(A), at(C)], { read: get });
   assert.deepEqual(read, ["index.json", "routes/near.json"]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [1100]);
+})();
 });
 
-test("loadNetwork fetches from the site the module came from by default", async (t) => {
+Then("loadNetwork fetches from the site the module came from by default", function () {
+  return (async (t) => {
   const asked = [];
   t.mock.method(globalThis, "fetch", async (url) => {
     asked.push(new URL(url).pathname);
@@ -90,28 +116,37 @@ test("loadNetwork fetches from the site the module came from by default", async 
   });
   await loadNetwork([at(A)]);
   assert.match(asked[0], /\/index\.json$/);
+})(scenarioContext);
 });
 
-test("a failed fetch says what failed", async (t) => {
+Then("a failed fetch says what failed", function () {
+  return (async (t) => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 404 }));
   await assert.rejects(loadNetwork([at(A)]), /index\.json: 404/);
+})(scenarioContext);
 });
 
-test("nearest says where a point joins the network, nearest first", () => {
+Then("nearest says where a point joins the network, nearest first", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   const joins = nearest(g, { lng: A[0], lat: A[1] + 0.001 }, "foot");
   assert.equal(joins.length, 1);
   assert.equal(joins[0][0], 0);
   assert.ok(Math.abs(joins[0][1] - crowMetres(at(A), { lng: A[0], lat: A[1] + 0.001 })) < 0.01);
+})();
 });
 
-test("a one-way road's far end still takes a car in", () => {
+Then("a one-way road's far end still takes a car in", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, FOOT | CAR_AB, 3]])]);
   assert.deepEqual(route(g, at(A), [at(B)], "car"), [1100]);
+})();
 });
 
-test("an unknown profile is refused, and a network of another version too", () => {
+Then("an unknown profile is refused, and a network of another version too", function () {
+  return (() => {
   const g = joinNetworks([network([A, B], [[0, 1, 1100, BOTH, 3]])]);
   assert.throws(() => route(g, at(A), [at(B)], "bike"), /no route profile "bike"/);
   assert.throws(() => joinNetworks([{ version: 2, nodes: [], edges: [] }]), /version 2/);
+})();
 });
