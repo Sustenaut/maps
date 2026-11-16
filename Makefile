@@ -29,9 +29,7 @@ $(VENV)/.done: tests/requirements.lock
 # package's own tests (tests/js), with theirs in coverage/lcov.info.
 functional: venv node
 	rm -rf coverage && mkdir coverage
-	node --test --experimental-test-coverage --test-coverage-include='lib/**' \
-	  --test-reporter=spec --test-reporter-destination=stdout \
-	  --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/js/*.test.js
+	npx --no-install c8 --reporter=lcov --reporter=text-summary --reports-dir=coverage --include='lib/**' cucumber-js
 	cd tests && COVERAGE_RCFILE=$(CURDIR)/.coveragerc COVERAGE_FILE=$(CURDIR)/coverage/.coverage \
 	  MAPS_BIN_DIR=$(CURDIR)/bin ../$(VENV)/bin/coverage run -m pytest -n auto
 	COVERAGE_RCFILE=.coveragerc COVERAGE_FILE=coverage/.coverage $(VENV)/bin/coverage combine -q
