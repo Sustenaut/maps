@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import re
+import shutil
 import struct
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -172,6 +173,20 @@ def pack_cache(tmp_path: Path, env: dict, data: Path) -> None:
     (root / "mapbuild").symlink_to(REPO / "mapbuild")
     (root / "data").symlink_to(data)
     env["cache"] = str(root)
+
+
+@given("a pack cache whose data is elsewhere")
+def pack_cache_elsewhere(tmp_path: Path, env: dict, data: Path) -> None:
+    pack_cache(tmp_path, env, data)
+    other = tmp_path / "other-data"
+    other.mkdir()
+    (Path(env["cache"]) / "data").unlink()
+    (Path(env["cache"]) / "data").symlink_to(other)
+
+
+@given("the cache command fails")
+def cache_command_fails(env: dict) -> None:
+    env["MAPS_PUBKIT"] = shutil.which("false")
 
 
 @when("I note index.json", target_fixture="noted")
