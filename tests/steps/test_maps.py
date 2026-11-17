@@ -186,7 +186,7 @@ def pack_cache_elsewhere(tmp_path: Path, env: dict, data: Path) -> None:
 
 @given("the cache command fails")
 def cache_command_fails(env: dict) -> None:
-    env["MAPS_PUBKIT"] = shutil.which("false")
+    env["MAPS_PUBRULES"] = shutil.which("false")
 
 
 @when("I note index.json", target_fixture="noted")

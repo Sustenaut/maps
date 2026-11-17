@@ -81,10 +81,10 @@ def pieces(pack: Path, out: Path, path: str) -> dict:
 
 
 def pubrules() -> str:
-    """The pubrules to make packs through: MAPS_PUBKIT, this repository's
+    """The pubrules to make packs through: MAPS_PUBRULES, this repository's
     .venv, or the one on PATH."""
     venv = ROOT / ".venv" / "bin" / "pubrules"
-    return os.environ.get("MAPS_PUBKIT") or (str(venv) if venv.exists() else "pubrules")
+    return os.environ.get("MAPS_PUBRULES") or (str(venv) if venv.exists() else "pubrules")
 
 
 def cached(root: Path, name: str, unit: str | None, outputs: list[Path], command: list[str]) -> bool:
