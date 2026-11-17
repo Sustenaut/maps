@@ -104,19 +104,19 @@ make functional     # the Gherkin suite, on small made-up data
 push to main and every morning, which picks up the places sites added. It
 keeps the downloaded data from run to run, fetching only what is missing
 (a new area, or one whose places changed), and keeps the built packs:
-`bin/maps build --cache` makes each pack through pubkit's `pubkit cache
-run`, by the entries of pubkit.json's `cache` block (`data`, `packs`,
+`bin/maps build --cache` makes each pack through pubrules's `pubrules cache
+run`, by the entries of pubrules.json's `cache` block (`data`, `packs`,
 `overview`), so a pack whose inputs (its data and places, the boundaries,
 mapbuild's code and tippecanoe's version) have not changed is copied, and
 a deploy that changes only `lib/` or `site/` builds nothing again. Label a
 pull request `refresh cache` to have its deploy, once it merges, restore
-nothing, so all the data is fetched and every pack made anew (pubkit's
-`actions/pr-label`); a run by hand with `refresh` does the same. pubkit's `actions/cache` restores and saves both. It runs once the repository variable
+nothing, so all the data is fetched and every pack made anew (pubrules's
+`actions/pr-label`); a run by hand with `refresh` does the same. pubrules's `actions/cache` restores and saves both. It runs once the repository variable
 `MAPS_DEPLOY` is `on`, with the Actions secret `CLOUDFLARE_GITHUB_API_TOKEN`
 and variable `CLOUDFLARE_ACCOUNT_ID`. The Pages project `sustenaut-maps`
 and the DNS name come from schryer/business-plan's infrastructure.
 
-`pr.yml` and `main.yml` are written by `pubkit sync` from `pubkit.json`.
+`pr.yml` and `main.yml` are written by `pubrules sync` from `pubrules.json`.
 
 ## Licences
 

@@ -74,6 +74,19 @@ Feature: Building the site
     Then it fails
     And stderr mentions "not an area path"
 
+  Scenario: A pack cache that fingerprints other data stops the build
+    Given a pack cache whose data is elsewhere
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it fails
+    And stderr mentions "--cache fingerprints the data at"
+
+  Scenario: A pack the cache can't make stops the build
+    Given a pack cache
+    And the cache command fails
+    When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
+    Then it fails
+    And stderr mentions "maps: pubrules cache run"
+
   Scenario: A pack is split into pieces of the same size
     Given pieces of 4096 bytes
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"

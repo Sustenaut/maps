@@ -1,5 +1,5 @@
 # Build and test maps.sustenaut.eu. CI runs `make venv node` then
-# `make functional` (pubkit.json's ci block). The build needs tippecanoe.
+# `make functional` (pubrules.json's ci block). The build needs tippecanoe.
 
 PYTHON ?= python3
 VENV := .venv
@@ -36,10 +36,10 @@ functional: venv node
 	COVERAGE_RCFILE=.coveragerc COVERAGE_FILE=coverage/.coverage $(VENV)/bin/coverage xml -q
 
 lock: venv
-	$(VENV)/bin/pubkit lock
+	$(VENV)/bin/pubrules lock
 
 sync-check: venv
-	$(VENV)/bin/pubkit sync --check
+	$(VENV)/bin/pubrules sync --check
 
 clean:
 	rm -rf _site $(VENV)
