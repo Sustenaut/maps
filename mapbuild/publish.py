@@ -11,10 +11,10 @@ the index, and the map package.
     out/lib/v1/...                    the map package (lib/v1 in the repository)
     out/_headers                      CORS and caching for Cloudflare Pages
 
-With --cache, each pack is made through `pubkit cache run`, by the entries
-of pubkit.json's cache block (`packs` per area, `overview`): a pack whose inputs (its data, the municipality
+With --cache, each pack is made through `pubrules cache run`, by the entries
+of pubrules.json's cache block (`packs` per area, `overview`): a pack whose inputs (its data, the municipality
 boundaries, mapbuild's code and tippecanoe's version) have not changed is
-copied from the cache instead of made again, and `pubkit cache prune`
+copied from the cache instead of made again, and `pubrules cache prune`
 then drops what this build did not use.
 """
 
@@ -80,30 +80,30 @@ def pieces(pack: Path, out: Path, path: str) -> dict:
     return {"dir": folder.as_posix(), "size": len(data), "chunk": CHUNK}
 
 
-def pubkit() -> str:
-    """The pubkit to make packs through: MAPS_PUBKIT, this repository's
+def pubrules() -> str:
+    """The pubrules to make packs through: MAPS_PUBKIT, this repository's
     .venv, or the one on PATH."""
-    venv = ROOT / ".venv" / "bin" / "pubkit"
-    return os.environ.get("MAPS_PUBKIT") or (str(venv) if venv.exists() else "pubkit")
+    venv = ROOT / ".venv" / "bin" / "pubrules"
+    return os.environ.get("MAPS_PUBKIT") or (str(venv) if venv.exists() else "pubrules")
 
 
 def cached(root: Path, name: str, unit: str | None, outputs: list[Path], command: list[str]) -> bool:
-    """Make `outputs` with `command` through `pubkit cache run`, in `root`,
-    where pubkit.json's cache entries are; True when they were reused."""
-    args = [pubkit(), "cache", "run", name, *([f"--unit={unit}"] if unit is not None else []),
+    """Make `outputs` with `command` through `pubrules cache run`, in `root`,
+    where pubrules.json's cache entries are; True when they were reused."""
+    args = [pubrules(), "cache", "run", name, *([f"--unit={unit}"] if unit is not None else []),
             *[f"--output={o}" for o in outputs], "--", *command]
     env = {**os.environ, "PYTHONPATH": str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", "")}
     done = subprocess.run(args, cwd=root, stdout=subprocess.PIPE, text=True, env=env)
     if done.returncode:
-        raise SystemExit(f"maps: pubkit cache run {name} failed (exit {done.returncode})")
+        raise SystemExit(f"maps: pubrules cache run {name} failed (exit {done.returncode})")
     return done.stdout.startswith("reused")
 
 
 def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path, centres: Path,
           cache: Path | None = None) -> dict:
-    """Write the site. With `cache`, the directory holding pubkit.json's
+    """Write the site. With `cache`, the directory holding pubrules.json's
     cache entries (the repository, as a rule), packs are made through
-    `pubkit cache run` there. The entries name the data as `data/` in that
+    `pubrules cache run` there. The entries name the data as `data/` in that
     directory, so --data must be it."""
     if out.exists():
         shutil.rmtree(out)
@@ -118,7 +118,7 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
     index = {"version": 1, "attribution": area.ATTRIBUTION, "overview": None, "areas": []}
     data = data.resolve()
     if cache and data != (cache / "data").resolve():
-        raise SystemExit(f"maps: --cache fingerprints the data at {cache / 'data'} (pubkit.json's cache "
+        raise SystemExit(f"maps: --cache fingerprints the data at {cache / 'data'} (pubrules.json's cache "
                          f"entries), so build from it, not from {data}")
     hits, made = 0, 0
     if (data / "national").exists():
@@ -149,7 +149,7 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
             listed["routes"] = routes.write(roads, out, entry["path"])
         index["areas"].append(listed)
     if cache:
-        subprocess.run([pubkit(), "cache", "prune"], cwd=cache, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run([pubrules(), "cache", "prune"], cwd=cache, check=True, stdout=subprocess.DEVNULL)
 
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     listed = municipality_list.build(data, centres)
@@ -162,6 +162,6 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
     shutil.copytree(ROOT / "site", out, dirs_exist_ok=True)
     (out / "_headers").write_text(HEADERS, encoding="utf-8")
     if cache:
-        print(f"maps: reused {hits} of {made} pack(s) through pubkit cache")
+        print(f"maps: reused {hits} of {made} pack(s) through pubrules cache")
     return index
 

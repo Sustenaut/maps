@@ -2,7 +2,7 @@ node_modules/
 _site/
 data/
 .venv/
-.pubkit/
+.pubrules/
 .cache/
 __pycache__/
 .pytest_cache/
