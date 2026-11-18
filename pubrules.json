@@ -48,7 +48,7 @@
   },
   "security": {
     "sonar": {
-      "args": "-Dsonar.sources=. -Dsonar.tests=tests -Dsonar.exclusions=tests/**"
+      "args": "-Dsonar.sources=. -Dsonar.tests=tests -Dsonar.exclusions=tests/**,coverage-download/**"
     }
   },
   "mirror": {
