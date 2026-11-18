@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 from . import area, municipalities as municipality_list, overview, routes
-from .places import checked
+from .places import checked, inside
 from .sources import municipalities
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,10 +72,12 @@ def pieces(pack: Path, out: Path, path: str) -> dict:
     hash of its content names the folder, so a changed pack gets new names
     and browsers can cache every piece for good."""
     data = pack.read_bytes()
-    folder = Path("packs") / path / hashlib.sha256(data).hexdigest()[:12]
-    (out / folder).mkdir(parents=True)
+    digest = hashlib.sha256(data).hexdigest()[:12]
+    folder = Path("packs") / path / digest
+    dest = inside(out / "packs", path) / digest
+    dest.mkdir(parents=True)
     for n, start in enumerate(range(0, len(data), CHUNK)):
-        (out / folder / f"{n}.bin").write_bytes(data[start:start + CHUNK])
+        (dest / f"{n}.bin").write_bytes(data[start:start + CHUNK])
     pack.unlink()
     return {"dir": folder.as_posix(), "size": len(data), "chunk": CHUNK}
 
@@ -131,8 +133,9 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
         made += 1
         index["overview"] = pieces(pack, out, "eesti")
     for entry in areas:
-        pack = tmp / entry["path"] / "map.pmtiles"
-        meta_file = tmp / entry["path"] / "meta.json"
+        work = inside(tmp, entry["path"])
+        pack = work / "map.pmtiles"
+        meta_file = work / "meta.json"
         if cache:
             hits += cached(cache, "packs", entry["path"], [pack, meta_file],
                            [sys.executable, "-m", "mapbuild", "build-area", "--data", str(data),
@@ -141,7 +144,7 @@ def build(data: Path, out: Path, areas_file: Path, node_modules: Path, tmp: Path
                             "--", entry["name"], entry["path"]])
             meta = json.loads(meta_file.read_text(encoding="utf-8"))
         else:
-            meta = area.build(data, entry["name"], entry["path"], pack, tmp / entry["path"] / "layers")
+            meta = area.build(data, entry["name"], entry["path"], pack, work / "layers")
         made += 1
         listed = {"path": entry["path"], **meta, "pack": pieces(pack, out, entry["path"])}
         roads = data / "areas" / entry["path"] / "road.geojsonl"

@@ -23,6 +23,7 @@ place is added to or removed from its area (or the cache is refreshed).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -46,6 +47,17 @@ def checked(path: str) -> str:
     if not isinstance(path, str) or not AREA_PATH.fullmatch(path):
         raise SystemExit(f"maps: not an area path: {path!r}")
     return path
+
+
+def inside(base: Path, path: str) -> Path:
+    """The folder an area's path names under base, resolved. The path must
+    be an area's, and the folder must stay under base once links are
+    followed, so data can never name a folder elsewhere."""
+    root = os.path.realpath(base)
+    full = os.path.realpath(os.path.join(root, path if isinstance(path, str) else ""))
+    if not (isinstance(path, str) and AREA_PATH.fullmatch(path)) or not full.startswith(root + os.sep):
+        raise SystemExit(f"maps: not an area path: {path!r}")
+    return Path(full)
 
 
 def read_places(source: str, base: Path) -> list[dict]:
