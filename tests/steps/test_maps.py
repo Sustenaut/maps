@@ -8,7 +8,6 @@ import hashlib
 import json
 import math
 import re
-import shutil
 import struct
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from pubtest.core import Result
 from pytest_bdd import given, parsers, scenarios, then, when
 
 scenarios("build.feature", "download.feature")
@@ -130,40 +130,37 @@ def sample_data(tmp_path: Path) -> Path:
     return data
 
 
-@pytest.fixture
-def env() -> dict:
-    return {}
+def ran(ctx, done) -> Result:
+    """A run of `maps`, kept as what the scenario's action came to, so
+    pubtest's Thens read it. It runs through pubtest's `run`, which allows a
+    build the ten minutes it may take, past `I run`'s two."""
+    return ctx.ran(Result(code=done.code, stdout=done.stdout, stderr=done.stderr, argv=done.argv))
 
 
 @given(parsers.parse('"{name}" is run from "{seat}"'))
-def run_from(tmp_path: Path, env: dict, name: str, seat: str) -> None:
+def run_from(tmp_path: Path, ctx, name: str, seat: str) -> None:
     centres = tmp_path / "centres.json"
     listed = json.loads(centres.read_text()) if centres.exists() else {"centres": {}}
     listed["centres"][name] = seat
     centres.write_text(json.dumps(listed))
-    env["centres"] = centres
-
-
-@given(parsers.parse("pieces of {size:d} bytes"))
-def pieces_of(env: dict, size: int) -> None:
-    env["MAPS_CHUNK"] = str(size)
+    ctx.centres = centres
 
 
 @when(parsers.parse('I build the areas "{a}" at "{a_path}" and "{b}" at "{b_path}"'), target_fixture="result")
-def build(run, binary, tmp_path: Path, data: Path, env: dict, a, a_path, b, b_path):
+def build(run, binary, ctx, tmp_path: Path, data: Path, a, a_path, b, b_path):
     areas = tmp_path / "areas.json"
     areas.write_text(json.dumps({"areas": [{"name": a, "path": a_path}, {"name": b, "path": b_path}]}))
-    centres = ["--centres", env.pop("centres")] if "centres" in env else []
-    cache = ["--cache", "--cache-root", env["cache"]] if "cache" in env else []
-    return run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site", *centres,
-               *cache, env={k: v for k, v in env.items() if k != "cache"}, timeout=600)
+    centres = ["--centres", ctx.__dict__.pop("centres")] if hasattr(ctx, "centres") else []
+    cache = ["--cache", "--cache-root", ctx.cache] if hasattr(ctx, "cache") else []
+    return ran(ctx, run(binary("maps"), "build", "--data", data, "--areas", areas, "--out", tmp_path / "_site",
+                        *centres, *cache, timeout=600))
 
 
 REPO = Path(__file__).resolve().parents[2]
 
 
 @given("a pack cache")
-def pack_cache(tmp_path: Path, env: dict, data: Path) -> None:
+def pack_cache(tmp_path: Path, ctx, data: Path) -> None:
     """A cache root of its own: the repository's pubrules.json, whose cache
     entries make the packs, its mapbuild and the sample data, which they
     fingerprint as mapbuild/ and data/."""
@@ -172,21 +169,16 @@ def pack_cache(tmp_path: Path, env: dict, data: Path) -> None:
     (root / "pubrules.json").write_text((REPO / "pubrules.json").read_text())
     (root / "mapbuild").symlink_to(REPO / "mapbuild")
     (root / "data").symlink_to(data)
-    env["cache"] = str(root)
+    ctx.cache = str(root)
 
 
 @given("a pack cache whose data is elsewhere")
-def pack_cache_elsewhere(tmp_path: Path, env: dict, data: Path) -> None:
-    pack_cache(tmp_path, env, data)
+def pack_cache_elsewhere(tmp_path: Path, ctx, data: Path) -> None:
+    pack_cache(tmp_path, ctx, data)
     other = tmp_path / "other-data"
     other.mkdir()
-    (Path(env["cache"]) / "data").unlink()
-    (Path(env["cache"]) / "data").symlink_to(other)
-
-
-@given("the cache command fails")
-def cache_command_fails(env: dict) -> None:
-    env["MAPS_PUBRULES"] = shutil.which("false")
+    (Path(ctx.cache) / "data").unlink()
+    (Path(ctx.cache) / "data").symlink_to(other)
 
 
 @when("I note index.json", target_fixture="noted")
@@ -215,8 +207,8 @@ def only_changed(site: Path, noted: dict, path: str) -> None:
 
 
 @then(parsers.parse("the pack cache holds {count:d} packs"))
-def cache_holds(env: dict, count: int) -> None:
-    assert len(list((Path(env["cache"]) / ".packcache").rglob("*.pmtiles"))) == count
+def cache_holds(ctx, count: int) -> None:
+    assert len(list((Path(ctx.cache) / ".packcache").rglob("*.pmtiles"))) == count
 
 
 @pytest.fixture
@@ -471,19 +463,15 @@ class WFS:
 
 
 @given("a WFS with two neighbouring municipalities", target_fixture="wfs")
-def a_wfs(env: dict):
+def a_wfs(monkeypatch):
     wfs = WFS()
-    env.update({"MAPS_WFS": wfs.url, "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"})
+    for name, value in {"MAPS_WFS": wfs.url, "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}.items():
+        monkeypatch.setenv(name, value)
     yield wfs
     wfs.server.shutdown()
 
 
-@given(parsers.parse("the WFS returns {count:d} features a page"))
-def page_size(env: dict, count: int) -> None:
-    env["MAPS_WFS_PAGE"] = str(count)
-
-
-def download(run, binary, tmp_path: Path, env: dict, name: str | None = None, path: str | None = None):
+def download(run, binary, ctx, tmp_path: Path, name: str | None = None, path: str | None = None):
     """Download the area named, or, with none, the areas the sites' places
     are in (sites.json, which the steps below fill)."""
     areas = tmp_path / "areas.json"
@@ -493,7 +481,7 @@ def download(run, binary, tmp_path: Path, env: dict, name: str | None = None, pa
     if not (tmp_path / "sites.json").exists():
         write_places(tmp_path, [])
     areas.write_text(json.dumps(config))
-    return run(binary("maps"), "download", "--data", tmp_path / "data", "--areas", areas, env=env)
+    return ran(ctx, run(binary("maps"), "download", "--data", tmp_path / "data", "--areas", areas))
 
 
 def write_places(tmp_path: Path, places: list[dict]) -> None:
@@ -508,9 +496,9 @@ def site_place(tmp_path: Path, place_id: str, lat: float, lng: float) -> None:
 
 
 @when("I download the areas the places are in", target_fixture="result")
-def download_places(run, binary, tmp_path: Path, env: dict, wfs: WFS):
+def download_places(run, binary, ctx, tmp_path: Path, wfs: WFS):
     wfs.before_second = len(wfs.requests)
-    return download(run, binary, tmp_path, env)
+    return download(run, binary, ctx, tmp_path)
 
 
 @then(parsers.parse('the planned areas are "{paths}"'))
@@ -543,14 +531,14 @@ def fetched_none(wfs: WFS) -> None:
 
 
 @when(parsers.parse('I download the area "{name}" at "{path}"'), target_fixture="result")
-def i_download(run, binary, tmp_path: Path, env: dict, name: str, path: str):
-    return download(run, binary, tmp_path, env, name, path)
+def i_download(run, binary, ctx, tmp_path: Path, name: str, path: str):
+    return download(run, binary, ctx, tmp_path, name, path)
 
 
 @when(parsers.parse('I download the area "{name}" at "{path}" again'), target_fixture="result")
-def i_download_again(run, binary, tmp_path: Path, env: dict, wfs: WFS, name: str, path: str):
+def i_download_again(run, binary, ctx, tmp_path: Path, wfs: WFS, name: str, path: str):
     wfs.before_second = len(wfs.requests)
-    return download(run, binary, tmp_path, env, name, path)
+    return download(run, binary, ctx, tmp_path, name, path)
 
 
 @then("the data has every municipality's boundary")

@@ -10,7 +10,7 @@ Feature: Downloading the data
     Given a WFS with two neighbouring municipalities
 
   Scenario: A layer is read page by page until a short page
-    Given the WFS returns 2 features a page
+    Given the environment sets "MAPS_WFS_PAGE" to "2"
     When I download the area "Alfa vald" at "louna/alfa"
     Then it succeeds
     And the data has every municipality's boundary

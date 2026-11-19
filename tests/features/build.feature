@@ -82,13 +82,15 @@ Feature: Building the site
 
   Scenario: A pack the cache can't make stops the build
     Given a pack cache
-    And the cache command fails
+    And a stand-in "pubrules" that fails, saying "no cache here"
+    And the environment sets "MAPS_PUBRULES" to "pubrules"
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
     Then it fails
     And stderr mentions "maps: pubrules cache run"
+    And "pubrules" was run with arguments matching "cache run *"
 
   Scenario: A pack is split into pieces of the same size
-    Given pieces of 4096 bytes
+    Given the environment sets "MAPS_CHUNK" to "4096"
     When I build the areas "Alfa vald" at "louna/alfa" and "Beeta vald" at "louna/beeta"
     Then it succeeds
     And the pack of "louna/alfa" is in more than one piece of 4096 bytes
