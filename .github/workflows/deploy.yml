@@ -46,14 +46,15 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install tippecanoe
-        run: sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
+      - name: Install tippecanoe, kept in the Actions cache
+        uses: Sustenaut/pubrules/actions/apt-install@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+        with: { packages: tippecanoe }
       - run: make venv node
       - name: Is the merged pull request labelled "refresh cache"?
         id: label
-        uses: Sustenaut/pubrules/actions/pr-label@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+        uses: Sustenaut/pubrules/actions/pr-label@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
       - name: Restore the kept data and packs (pubrules.json's cache entries)
-        uses: Sustenaut/pubrules/actions/cache@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+        uses: Sustenaut/pubrules/actions/cache@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
         with:
           step: restore
           refresh: ${{ inputs.refresh || steps.label.outputs.present }}
@@ -62,7 +63,7 @@ jobs:
       - name: Build the site
         run: bin/maps build --cache
       - name: Keep the data and the packs for the next run
-        uses: Sustenaut/pubrules/actions/cache@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+        uses: Sustenaut/pubrules/actions/cache@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
         with:
           step: save
       - uses: Sustenaut/pubhost/actions/deploy-static@2196c741d3de6c92c6035c42435c6e517c8ba0ce # v0.1.0

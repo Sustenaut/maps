@@ -3,7 +3,8 @@
   "bin": "maps",
   "ci": {
     "with": {
-      "setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node",
+      "apt-packages": "tippecanoe",
+      "setup": "make venv node",
       "test": "make functional",
       "shellcheck": "with-secrets bin/maps"
     }

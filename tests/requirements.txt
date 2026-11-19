@@ -1,6 +1,8 @@
 # The build's and the functional suite's direct dependencies. Exact pins
 # only; the resolved set with hashes lives in requirements.lock. Regenerate
 # it with `pubrules lock`.
+# The steps and plugin the suite runs with; the nightly moves the pin.
+pubtest @ https://github.com/Sustenaut/pubtest/releases/download/v0.2.2/pubtest-0.2.2-py3-none-any.whl
 -r requirements-pubrules.txt
 shapely==2.2.0
 pyproj==3.8.0

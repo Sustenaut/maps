@@ -13,7 +13,7 @@ jobs:
   # jobs it ran are skipped, and nothing here tests less than it did.
   tested:
     name: ci
-    uses: Sustenaut/pubrules/.github/workflows/job-tested.yml@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+    uses: Sustenaut/pubrules/.github/workflows/job-tested.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
     with: {"workflow": ".github/workflows/pr.yml"}
     permissions:
       actions: read
@@ -23,21 +23,21 @@ jobs:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubrules/.github/workflows/job-service-checks.yml@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+    uses: Sustenaut/pubrules/.github/workflows/job-service-checks.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubrules/.github/workflows/job-service-tests.yml@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
-    with: {"setup": "sudo apt-get update -q && sudo apt-get install -y -q tippecanoe && make venv node", "test": "make functional"}
+    uses: Sustenaut/pubrules/.github/workflows/job-service-tests.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+    with: {"apt-packages": "tippecanoe", "setup": "make venv node", "test": "make functional"}
 
   sonar:
     name: ci
     needs: [tested, tests]
     if: ${{ !failure() && !cancelled() }}
-    uses: Sustenaut/pubrules/.github/workflows/job-sonar.yml@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
+    uses: Sustenaut/pubrules/.github/workflows/job-sonar.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
     permissions:
       actions: read
       contents: read
