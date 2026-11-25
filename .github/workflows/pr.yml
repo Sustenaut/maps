@@ -14,7 +14,7 @@ jobs:
   # jobs it ran are skipped, and nothing here tests less than it did.
   tested:
     name: ci
-    uses: Sustenaut/pubrules/.github/workflows/job-tested.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+    uses: Sustenaut/pubrules/.github/workflows/job-tested.yml@b39fa9d4c84f0c1c0ab00b83ad72639d0ad88894 # v0.50.0
     with: {"workflow": ".github/workflows/pr.yml"}
     permissions:
       actions: read
@@ -24,21 +24,24 @@ jobs:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubrules/.github/workflows/job-service-checks.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+    uses: Sustenaut/pubrules/.github/workflows/job-service-checks.yml@b39fa9d4c84f0c1c0ab00b83ad72639d0ad88894 # v0.50.0
     with: {"shellcheck": "with-secrets bin/maps"}
 
   tests:
     name: ci
     needs: [tested]
     if: ${{ needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubrules/.github/workflows/job-service-tests.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+    uses: Sustenaut/pubrules/.github/workflows/job-service-tests.yml@b39fa9d4c84f0c1c0ab00b83ad72639d0ad88894 # v0.50.0
     with: {"apt-packages": "tippecanoe", "setup": "make venv node", "test": "make functional"}
 
   sonar:
     name: ci
     needs: [tested, tests]
     if: ${{ github.event_name != 'merge_group' && needs.tested.outputs.tested != 'true' }}
-    uses: Sustenaut/pubrules/.github/workflows/job-sonar.yml@7a9304ee5ef0aa08ea5b04e6befbe4163eb7f919 # v0.47.0
+    uses: Sustenaut/pubrules/.github/workflows/job-sonar.yml@b39fa9d4c84f0c1c0ab00b83ad72639d0ad88894 # v0.50.0
+    permissions:
+      contents: read
+      pull-requests: read
     with: {"reports": "sonar.python.coverage.reportPaths=*.xml sonar.javascript.lcov.reportPaths=lcov.info"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
